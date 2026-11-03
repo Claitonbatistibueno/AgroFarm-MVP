@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Farm Project - Farm management system (animals, lots, weighing, feeding, events, and costs)."
+    />
+    <meta name="Claiton Batisti Bueno" content="Farm Project" />
+    <title>Farm Project | Farm Management</title>
+
+    <link rel="stylesheet" href="assets/css/styles.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+
+    <style>
+      /* === Base / Theme === */
+      /* Theme tokens */
+      :root {
+        --bg: #0b1220;
+        --panel: #101a2e;
+        --muted: #9fb0d0;
+        --text: #eaf1ff;
+        --brand: #54d08a;
+        --brand-hover: #4ade80;
+        --brand2: #4bc4ff;
+        --line: rgba(255, 255, 255, 0.1);
+      }
+
+      /* Global reset */
+      * {
+        box-sizing: border-box;
+      }
+
+      /* Page base */
+      body {
+        margin: 0;
+        font-family: 'Inter', Arial, Helvetica, sans-serif; /* Adicionei Inter se disponivel */
+        background: linear-gradient(180deg, var(--bg), #060a13);
+        color: var(--text);
+      }
+
+      a {
+        color: var(--brand2);
+        text-decoration: none;
+        transition: 0.2s;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      /* Layout container */
+      .container {
+        width: min(1100px, 92vw);
+        margin: 0 auto;
+      }
+
+      /* Header */
+      .topbar {
+        border-bottom: 1px solid var(--line);
+        background: rgba(16, 26, 46, 0.85); /* Mais opacidade para leitura */
+        backdrop-filter: blur(12px);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .topbar-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 0;
+      }
+
+      .brand {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .logo {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        background: radial-gradient(
+          circle at 30% 30%,
+          var(--brand),
+          rgba(84, 208, 138, 0.2)
+        );
+        border: 1px solid var(--line);
+        object-fit: cover;
+        display: block;
+      }
+
+      .brand h1 {
+        font-size: 18px;
+        margin: 0;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+      }
+
+      .brand p {
+        margin: 0;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      nav ul {
+        list-style: none;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        padding: 0;
+        margin: 0;
+      }
+
+      nav li {
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      nav li a {
+        color: var(--text);
+      }
+      
+      nav li a:hover {
+        color: var(--brand);
+        text-decoration: none;
+      }
+
+      /* === NOVO BOTÃO DE LOGIN MODERNIZADO === */
+      .btn-login {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: linear-gradient(135deg, var(--brand), var(--brand-hover));
+        color: #05070a !important; /* Texto escuro para contraste */
+        padding: 8px 20px;
+        border-radius: 99px; /* Formato pílula */
+        font-weight: 700;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border: none;
+        box-shadow: 0 4px 15px rgba(84, 208, 138, 0.2);
+        transition: all 0.3s ease;
+      }
+
+      .btn-login:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(84, 208, 138, 0.4);
+        text-decoration: none;
+        filter: brightness(1.1);
+      }
+      
+      .btn-login i {
+        font-size: 14px;
+      }
+
+      /* Hero */
+      .hero {
+        padding: 40px 0 20px 0;
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 24px;
+        align-items: stretch;
+      }
+
+      /* Cards */
+      .card {
+        background: rgba(16, 26, 46, 0.6);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+        backdrop-filter: blur(5px);
+      }
+
+      .card-pad {
+        padding: 24px;
+      }
+
+      .kicker {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .hero h2 {
+        margin: 15px 0 12px 0;
+        font-size: 32px;
+        line-height: 1.15;
+        font-weight: 700;
+        letter-spacing: -1px;
+        background: linear-gradient(to right, #fff, #9fb0d0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .hero p {
+        color: var(--muted);
+        margin: 0 0 20px 0;
+        line-height: 1.6;
+        font-size: 15px;
+      }
+
+      .cta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .btn {
+        display: inline-block;
+        padding: 12px 18px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+      
+      .btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        text-decoration: none;
+      }
+
+      .btn.primary {
+        background: linear-gradient(
+          90deg,
+          rgba(84, 208, 138, 0.25),
+          rgba(75, 196, 255, 0.18)
+        );
+        border-color: rgba(84, 208, 138, 0.4);
+        color: #fff;
+      }
+      
+      .btn.primary:hover {
+        background: linear-gradient(
+          90deg,
+          rgba(84, 208, 138, 0.35),
+          rgba(75, 196, 255, 0.28)
+        );
+      }
+
+      .grid2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .stat {
+        padding: 14px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .stat strong {
+        display: block;
+        font-size: 20px;
+        color: var(--brand);
+      }
+
+      .stat span {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 4px;
+        display: block;
+      }
+
+      .media {
+        position: relative;
+        min-height: 320px;
+        background: #0a0f1d;
+      }
+
+      .media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        filter: saturate(1.1) contrast(1.05);
+      }
+
+      .media .overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          90deg,
+          rgba(6, 10, 19, 0.8),
+          rgba(6, 10, 19, 0.2),
+          transparent
+        );
+      }
+
+      .media .caption {
+        position: absolute;
+        left: 20px;
+        bottom: 20px;
+        right: 20px;
+        color: rgba(234, 241, 255, 0.92);
+        font-size: 13px;
+        line-height: 1.35;
+      }
+
+      section {
+        margin: 40px 0;
+      }
+
+      .section-title {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 10px;
+        margin: 0 0 16px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        padding-bottom: 10px;
+      }
+
+      .section-title h3 {
+        margin: 0;
+        font-size: 20px;
+        color: var(--brand2);
+      }
+
+      .section-title p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .tiles {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+
+      .tile {
+        padding: 20px;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+        transition: transform 0.2s;
+      }
+      
+      .tile:hover {
+        transform: translateY(-3px);
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .tile h4 {
+        margin: 0 0 10px 0;
+        color: #fff;
+      }
+
+      .tile p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+        font-size: 14px;
+      }
+
+      /* Table */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        overflow: hidden;
+        border-radius: 14px;
+      }
+
+      th,
+      td {
+        text-align: left;
+        padding: 14px 14px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+        font-size: 14px;
+      }
+
+      th {
+        color: var(--brand);
+        background: rgba(255, 255, 255, 0.05);
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 12px;
+        letter-spacing: 1px;
+      }
+
+      td {
+        color: rgba(234, 241, 255, 0.9);
+      }
+      
+      tr:last-child td {
+        border-bottom: none;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .pill {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.04);
+        font-size: 12px;
+        color: var(--brand2);
+      }
+
+      .gallery {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 16px;
+      }
+
+      .gallery .stack {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      .imgbox {
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        background: #0a0f1d;
+        transition: opacity 0.2s;
+      }
+      
+      .imgbox:hover {
+        opacity: 0.9;
+      }
+
+      .imgbox img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      /* Forms */
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      label {
+        display: block;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--muted);
+        margin: 0 0 8px 0;
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: rgba(0, 0, 0, 0.2);
+        color: var(--text);
+        outline: none;
+        font-size: 14px;
+        transition: border-color 0.2s;
+      }
+      
+      input:focus, textarea:focus {
+        border-color: var(--brand);
+        background: rgba(0, 0, 0, 0.3);
+      }
+
+      textarea {
+        min-height: 110px;
+        resize: vertical;
+      }
+
+      /* Footer */
+      footer {
+        margin-top: 40px;
+        padding: 26px 0 40px 0;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 13px;
+        text-align: center;
+      }
+
+      .small {
+        font-size: 13px;
+      }
+
+      .note {
+        border-left: 3px solid var(--brand);
+        padding: 14px 16px;
+        background: rgba(84, 208, 138, 0.08);
+        border-radius: 0 12px 12px 0;
+        color: rgba(234, 241, 255, 0.92);
+      }
+
+      /* Replacements for inline styles (no visual changes) */
+      .mt-10 { margin-top: 10px; }
+      .mt-12 { margin-top: 12px; }
+      .m-0 { margin: 0; }
+
+      .hero-quote {
+        margin: 20px 0 0 0;
+        color: var(--muted);
+        border-left: 2px solid var(--line);
+        padding-left: 16px;
+        font-style: italic;
+      }
+
+      .imgbox-tall { min-height: 280px; }
+      .imgbox-short { min-height: 140px; }
+
+      .map-iframe {
+        border: 0;
+        border-radius: 12px;
+        opacity: 0.8;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      @media (max-width: 900px) {
+        .hero { grid-template-columns: 1fr; }
+        .tiles { grid-template-columns: 1fr; }
+        .gallery { grid-template-columns: 1fr; }
+        .form-grid { grid-template-columns: 1fr; }
+        nav ul { flex-wrap: wrap; justify-content: center; margin-top: 10px;}
+        .topbar-inner { flex-direction: column; gap: 10px; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <header class="topbar">
+      <div class="container topbar-inner">
+        <div class="brand">
+          <img src="assets/img/logo.png" alt="Farm Project Logo" class="logo" />
+          <div>
+            <h1>Farm Project</h1>
+          </div>
+        </div>
+
+        <nav aria-label="Main navigation">
+          <ul>
+            <li><a href="#overview">Animal Control</a></li>
+            <li><a href="#reports">Financial Reports</a></li>
+            <li><a href="#form">Operational Reports</a></li> <li>
+                <a href="login.php" class="btn-login">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                    SYSTEM LOGIN
+                </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="hero" id="overview">
+        <div class="card">
+          <div class="card-pad">
+            <span class="kicker">Management System</span>
+
+            <h2>
+              End-to-end farm control: Animals, Feeding, Weighings, Events,
+              Operational and Finance cost Control.
+            </h2>
+
+            <p>
+              Track costs, margins and productivity across animals, lots and farm
+              operations. Make informed decisions based on real data, improving
+              profitability, cost control and long-term sustainability.
+            </p>
+
+            <div class="grid2" aria-label="Sample KPIs">
+              <div class="stat">
+                <strong>28</strong>
+                <span>Active animals (sample)</span>
+              </div>
+              <div class="stat">
+                <strong>€ 12,540</strong>
+                <span>Total cost by lot (sample)</span>
+              </div>
+              <div class="stat">
+                <strong>+0.86 kg</strong>
+                <span>Average daily gain (AVG) (sample)</span>
+              </div>
+              <div class="stat">
+                <strong>2</strong>
+                <span>Lots in operation (sample)</span>
+              </div>
+            </div>
+
+            <div class="cta-row">
+              <a class="btn primary" href="#form">Register an animal</a>
+              <a class="btn" href="#reports">Finance Reports</a>
+              <a class="btn" href="#" target="_blank" rel="noopener">
+                Operational Reports
+              </a>
+            </div>
+
+            <div class="note mt-12">
+              <p class="small m-0">
+                Centralized control of animals, health and sanitary events. Keep
+                accurate records of animal status, treatments and phytosanitary
+                actions to support informed decisions and healthier herds.
+              </p>
+            </div>
+
+            <blockquote class="small hero-quote">
+              <q>
+                Well-structured data supports better decisions: productivity,
+                traceability, and cost control.
+              </q>
+            </blockquote>
+
+            <p class="small muted mt-10"></p>
+          </div>
+        </div>
+
+        <aside class="card media" aria-label="Hero image">
+          <img
+            src="assets/img/OIP.webp"
+            alt="Cows grazing on a green pasture (hero image)"
+          />
+          <div class="overlay" aria-hidden="true"></div>
+          <div class="caption">
+            <div class="pill">Field view</div>
+            <p class="m-0 mt-10">Real-time monitoring of herd location and status.</p>
+          </div>
+        </aside>
+      </div>
+
+      <section id="modules">
+        <div class="section-title">
+          <h3>System modules</h3>
+        </div>
+
+        <div class="tiles">
+          <div class="tile">
+            <h4>Animals</h4>
+            <p>
+              Registration and management by <strong>tag</strong>, breed/type,
+              sex, country of origin, and lifecycle status. Designed to support
+              traceability, health records, and audit-ready reporting.
+            </p>
+          </div>
+
+          <div class="tile">
+            <h4>Lots</h4>
+            <p>
+              Group management for the herd; supports a many-to-many allocation
+              (lot ↔ animals).
+            </p>
+
+            <ol class="muted"></ol>
+          </div>
+
+          <div class="tile">
+            <h4>Performance & Costs</h4>
+            <p>
+              Weighings, daily feeding, and operational costs with reports by lot
+              and by animal.
+            </p>
+            <p class="muted">
+              Reporting examples: average daily gain uses
+              <strong>Average </strong>(daily_gain), and total lot cost uses
+              <strong>support</strong>(cost_value).
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section aria-label="Image gallery">
+        <div class="section-title">
+          <h3>Gallery</h3>
+        </div>
+
+        <div class="gallery">
+          <div class="imgbox imgbox-tall">
+            <img
+              src="assets/img/OIP%20(3).webp"
+              alt="Aerial view of cows in a pasture"
+            />
+          </div>
+          <div class="stack">
+            <div class="imgbox imgbox-short">
+              <img
+                src="assets/img/OIP%20(1).webp"
+                alt="Cow in the field (image 1)"
+              />
+            </div>
+            <div class="imgbox imgbox-short">
+              <img
+                src="assets/img/OIP%20(2).webp"
+                alt="Cow grazing (image 2)"
+              />
+            </div>
+          </div>
+        </div>
+
+        <p class="small muted mt-10"></p>
+      </section>
+
+      <section id="reports">
+        <div class="section-title">
+          <h3>Financial & Operational Reports</h3>
+        </div>
+
+        <div class="card">
+          <div class="card-pad">
+            <table aria-label="Reports table">
+              <thead>
+                <tr>
+                  <th>Report Type</th>
+                  <th>Business Purpose</th>
+                  <th>Result Set</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="pill">Active animals</span></td>
+                  <td>Provides a list of animals with active operational status.</td>
+                  <td>
+                    Animal identifier, tag number, sex, country of origin,
+                    operational status.
+                  </td>
+                </tr>
+                <tr>
+                  <td><span class="pill">By country of origin</span></td>
+                  <td>
+                    Supports regulatory compliance and origin-based traceability
+                    analysis.
+                  </td>
+                  <td>Records grouped and filtered by country identifier.</td>
+                </tr>
+                <tr>
+                  <td><span class="pill">Weighing history</span></td>
+                  <td>Tracks weight evolution and performance metrics per animal.</td>
+                  <td>Weighing date, recorded weight (kg), calculated daily gain.</td>
+                </tr>
+                <tr>
+                  <td><span class="pill">Lot costs</span></td>
+                  <td>
+                    Aggregates cost data to support profitability and cost
+                    analysis.
+                  </td>
+                  <td>Total cost value aggregated by lot identifier.</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <p class="small muted mt-10"></p>
+          </div>
+        </div>
+      </section>
+
+      <section id="form">
+        <div class="section-title">
+          <h3>Try AgroFarm</h3>
+          <p>Animal registration, weighing, feeding, health and finance live inside the secure app.</p>
+        </div>
+        <div class="card">
+          <div class="card-pad">
+            <a class="btn primary" href="login.php">Log in to register animals</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="contact">
+        <div class="section-title">
+          <h3>Contact</h3>
+        </div>
+
+        <div class="card">
+          <div class="card-pad">
+            <div class="grid2">
+              <div>
+                <h4 class="m-0 mt-10">Localização</h4>
+
+                <iframe
+                  class="map-iframe"
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3112.5562723788965!2d-9.139!3d38.722!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzjCsDQzJzE5LjIiTiA5wrAwOCcyNC4wIlc!5e0!3m2!1sen!2spt!4v1600000000000!5m2!1sen!2spt"
+                  width="100%"
+                  height="300"
+                  allowfullscreen=""
+                  loading="lazy"
+                  referrerpolicy="no-referrer-when-downgrade"
+                  title="Google Maps location"
+                ></iframe>
+              </div>
+              <div>
+                  <h4 class="m-0 mt-10">Contacts</h4>
+                  <p class="muted">
+                      Name: Claiton Batisti Bueno
+					  Phone: +353 084 844 7965<br>
+                      Email: 75.Claiton.BatistiBueno@learner.lcete.ie
+                  </p>
+                  <p class="muted mt-12">
+                      14, Shannonvale, Old Cratloe<br>
+                      Limerick, Irland
+					  VR94RAV
+					  
+                  </p>
+              </div>
+            </div>
+
+            <p class="small muted mt-10">
+              Quick navigation:
+              <a href="#overview">Top</a> • <a href="#modules">Modules</a> •
+              <a href="#reports">Reports</a> • <a href="#form">Form</a>
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <div class="container">
+          <p class="small muted m-0">© 2026 Farm Project. All rights reserved.</p>
+        
+          <div class="sr-only" aria-hidden="true">
+            <h5>Supplementary heading level 5</h5>
+            <h6>Supplementary heading level 6</h6>
+          </div>
+        </div>
+      </footer>
+    </main>
+  </body>
+</html>

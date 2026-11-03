@@ -1,0 +1,9 @@
+* text=auto
+*.php text eol=crlf
+*.html text eol=crlf
+*.md text eol=crlf
+*.sql text eol=crlf
+*.py text eol=crlf
+*.png binary
+*.webp binary
+*.mp4 binary

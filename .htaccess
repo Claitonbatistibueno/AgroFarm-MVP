@@ -1,0 +1,15 @@
+# ===== AgroFarm — Apache rules (XAMPP and most shared hosting) =====
+Options -Indexes
+DirectoryIndex index.html login.php
+
+# Never serve secrets, database dumps, logs or source tooling
+<FilesMatch "(^\.env.*|\.sql|\.log|\.md|\.py|\.ini)$">
+    Require all denied
+</FilesMatch>
+<FilesMatch "^(ai_error_log\.txt|ai_alerts\.txt|ai_analysis\.json|temp_request_.*\.json|New Text Document\.txt|teste\.cvs)$">
+    Require all denied
+</FilesMatch>
+<FilesMatch "^(vet_ai\.php)$">
+    Require all denied
+</FilesMatch>
+RedirectMatch 404 ^/?(.*/)?(\.git|\.idea|\.venv|database|tools)(/|$)
