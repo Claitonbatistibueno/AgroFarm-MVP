@@ -4,18 +4,22 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as budgets from 'aws-cdk-lib/aws-budgets';
 import { Construct } from 'constructs';
 
+/** Instance types an AWS Free Plan account may launch (AWS EC2 docs, accounts from 15 July 2025). */
+export const FREE_PLAN_INSTANCE_TYPES = ['t4g.micro', 't4g.small', 't3.micro', 't3.small', 'c7i-flex.large', 'm7i-flex.large'];
+
 export interface AgroFarmStackProps extends cdk.StackProps {
   /** E-mail that receives the cost alerts. Without it no budget is created. */
   readonly budgetEmail?: string;
   /** Monthly limit in USD of gross usage (before credits) for the alert. */
   readonly budgetUsd?: number;
-  /** EC2 size. t3.micro is Free Plan eligible. */
+  /** EC2 size. t4g.micro (ARM) is the cheapest Free Plan eligible type. */
   readonly instanceType?: string;
 }
 
 /**
  * Zero-cost hosting for AgroFarm (AWS Free Plan):
- *  - one t3.micro instance running the Docker image from GitHub Container Registry
+ *  - one t4g.micro instance (ARM, the cheapest Free Plan eligible type) running the
+ *    Docker image from GitHub Container Registry
  *  - a VPC with a single public subnet and NO NAT gateway (NAT is paid)
  *  - no load balancer, no RDS (the database is Supabase, free plan)
  *  - deploys and rollbacks through SSM Run Command (no SSH port, no keys)
@@ -27,6 +31,12 @@ export class AgroFarmStack extends cdk.Stack {
 
   constructor(scope: Construct, id: string, props: AgroFarmStackProps = {}) {
     super(scope, id, props);
+
+    const instanceType = props.instanceType ?? 't4g.micro';
+    if (!FREE_PLAN_INSTANCE_TYPES.includes(instanceType)) {
+      throw new Error(`${instanceType} is not a Free Plan instance type. Use one of: ${FREE_PLAN_INSTANCE_TYPES.join(', ')}`);
+    }
+    const isArm = instanceType.startsWith('t4g');
 
     const vpc = new ec2.Vpc(this, 'Vpc', {
       maxAzs: 1,
@@ -68,8 +78,10 @@ export class AgroFarmStack extends cdk.Stack {
     this.instance = new ec2.Instance(this, 'Web', {
       vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
-      instanceType: new ec2.InstanceType(props.instanceType ?? 't3.micro'),
-      machineImage: ec2.MachineImage.latestAmazonLinux2023(),
+      instanceType: new ec2.InstanceType(instanceType),
+      machineImage: ec2.MachineImage.latestAmazonLinux2023({
+        cpuType: isArm ? ec2.AmazonLinuxCpuType.ARM_64 : ec2.AmazonLinuxCpuType.X86_64,
+      }),
       securityGroup: sg,
       role,
       userData,
@@ -77,13 +89,13 @@ export class AgroFarmStack extends cdk.Stack {
       associatePublicIpAddress: true,
       blockDevices: [{
         deviceName: '/dev/xvda',
-        volume: ec2.BlockDeviceVolume.ebs(16, { volumeType: ec2.EbsDeviceVolumeType.GP3, encrypted: true }),
+        volume: ec2.BlockDeviceVolume.ebs(8, { volumeType: ec2.EbsDeviceVolumeType.GP3, encrypted: true }),
       }],
     });
     cdk.Tags.of(this).add('project', 'agrofarm');
 
     if (props.budgetEmail) {
-      const limit = props.budgetUsd ?? 10;
+      const limit = props.budgetUsd ?? 15;
       new budgets.CfnBudget(this, 'CostAlert', {
         budget: {
           budgetName: 'agrofarm-monthly',
