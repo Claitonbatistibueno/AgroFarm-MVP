@@ -100,7 +100,7 @@ function vet_ai_parse_json(string $text): ?array {
 
 /** Normalise the report so the page can render it without surprises. */
 function vet_ai_normalise(array $r): array {
-    $list = fn($v) => array_values(array_filter(array_map('strval', is_array($v) ? $v : []), 'strlen'));
+    $list = fn($v) => array_values(array_filter(array_map('strval', is_array($v) ? $v : []), fn(string $s): bool => $s !== ''));
     $hyps = [];
     foreach (($r['hypotheses'] ?? []) as $h) {
         if (!is_array($h) || empty($h['name'])) { continue; }

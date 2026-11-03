@@ -131,7 +131,7 @@ function csrf_check(): void {
 
     $sent = $_POST['csrf_token'] ?? $_GET['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
     if (!is_string($sent) || !hash_equals(csrf_token(), $sent)) {
-        http_response_code(419);
+        http_response_code(403);   // 419 is not a standard code: Apache turns it into 500
         die('Your session expired or the request was invalid. Please go back, refresh the page and try again.');
     }
 }

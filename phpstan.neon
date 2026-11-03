@@ -10,5 +10,8 @@ parameters:
         - e2e/*
         - cdk/*
         - tests/*
+    dynamicConstantNames:
+        - APP_ENV
+        - APP_DEBUG
     bootstrapFiles:
         - tests/phpstan-bootstrap.php

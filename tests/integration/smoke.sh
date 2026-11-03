@@ -35,7 +35,7 @@ curl -s -c "$JAR" -b "$JAR" --data-urlencode "username=$USERNAME" --data-urlenco
   -d "csrf_token=$TOKEN" "$BASE_URL/login.php" | grep -q "Invalid username or password" \
   && pass "wrong password rejected" || fail "wrong password not rejected"
 code=$(curl -s -o /dev/null -w '%{http_code}' -c "$JAR" -b "$JAR" -d "username=$USERNAME&password=x" "$BASE_URL/login.php")
-[ "$code" = "419" ] && pass "login without CSRF token blocked" || fail "login without CSRF token returned $code"
+[ "$code" = "403" ] && pass "login without CSRF token blocked" || fail "login without CSRF token returned $code"
 loc=$(curl -s -o /dev/null -w '%{redirect_url}' -c "$JAR" -b "$JAR" --data-urlencode "username=$USERNAME" \
   --data-urlencode "password=$PASSWORD" -d "csrf_token=$TOKEN" "$BASE_URL/login.php")
 [[ "$loc" == *dashboard.php ]] && pass "login" || { fail "login (redirect: $loc)"; echo "$FAILS failure(s)"; exit 1; }
@@ -54,7 +54,7 @@ done
 # --- 5. A write round-trip (create + delete a client) with CSRF
 TOKEN=$(curl -s -b "$JAR" "$BASE_URL/clients.php" | csrf_from)
 code=$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR" -d "action=save_client&name=x" "$BASE_URL/clients.php")
-[ "$code" = "419" ] && pass "POST without CSRF token blocked" || fail "POST without CSRF token returned $code"
+[ "$code" = "403" ] && pass "POST without CSRF token blocked" || fail "POST without CSRF token returned $code"
 NAME="CI Client $RANDOM"
 curl -s -b "$JAR" -L -o /dev/null -F csrf_token="$TOKEN" -F action=save_client -F client_id= -F company_id=5 \
   -F "name=$NAME" -F phone=1 -F email=ci@example.com -F address=CI "$BASE_URL/clients.php"

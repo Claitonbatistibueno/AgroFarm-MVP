@@ -5,5 +5,8 @@ parameters:
         - lib
         - vet_ai.php
         - health.php
+    dynamicConstantNames:
+        - APP_ENV
+        - APP_DEBUG
     bootstrapFiles:
         - tests/phpstan-bootstrap.php
