@@ -1,9 +1,6 @@
+# Line endings: LF in the repository, native on checkout. Shell scripts always LF.
 * text=auto
-*.php text eol=crlf
-*.html text eol=crlf
-*.md text eol=crlf
-*.sql text eol=crlf
-*.py text eol=crlf
+*.sh text eol=lf
 *.png binary
 *.webp binary
 *.mp4 binary
