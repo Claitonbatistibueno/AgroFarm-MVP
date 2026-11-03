@@ -52,6 +52,7 @@ Welcome to **Farm-Project**, this is my project submission for the Immersive Sof
 
 1. Create a free project at [supabase.com](https://supabase.com) (region **West EU (Ireland)**).
 2. **SQL Editor → New query**, paste [`database/supabase.sql`](database/supabase.sql) and **Run**. It creates the tables, the demo data and the security rules.
+   If the editor stops part-way on the big file, run the same script split into small files instead: [`database/supabase-parts/`](database/supabase-parts/) `part1` → `part8`, one query each, in order (part 1 cleans any half-created tables, so it is safe to start again).
 3. **Connect → Session pooler** gives the values for `.env`: host, port `5432`, database `postgres`, user `postgres.<project-ref>`, your database password, `DB_SSLMODE=require`.
 
 Demo login: **`demo` / `AgroFarm2026!`** — change it in *Users* after the first login.
