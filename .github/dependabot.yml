@@ -1,0 +1,41 @@
+# Dependabot: automated dependency and security updates (DevSecOps shift-left).
+# Every update arrives as a normal pull request, so it must pass the same CI gate.
+version: 2
+updates:
+  - package-ecosystem: composer
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 3
+    commit-message: { prefix: chore(deps) }
+
+  - package-ecosystem: docker
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    commit-message: { prefix: chore(docker) }
+
+  - package-ecosystem: npm
+    directory: /e2e
+    schedule: { interval: weekly, day: monday }
+    groups:
+      e2e: { patterns: ['*'] }
+    commit-message: { prefix: chore(deps-e2e) }
+
+  - package-ecosystem: npm
+    directory: /cdk
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 3
+    groups:
+      cdk: { patterns: ['*'] }
+    commit-message: { prefix: chore(deps-cdk) }
+
+  - package-ecosystem: pip
+    directory: /tools
+    schedule: { interval: weekly, day: monday }
+    commit-message: { prefix: chore(deps-py) }
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    groups:
+      actions: { patterns: ['*'] }
+    commit-message: { prefix: chore(ci) }

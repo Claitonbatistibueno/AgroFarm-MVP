@@ -1,0 +1,166 @@
+name: Deploy
+
+# Continuous Delivery / Deployment:
+#   push to main  -> CI gate -> image published to GitHub Container Registry
+#                 -> (if AWS is enabled) rolled out to the EC2 instance -> smoke test
+#   tag v*        -> same, the image is also tagged with the version (release)
+#   Run workflow  -> with an image tag = rollback (redeploy an older image, no rebuild)
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Existing image tag to deploy (rollback), e.g. a commit SHA or v1.0.0. Leave empty to build the current commit.'
+        required: false
+        default: ''
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: eu-west-1
+  IMAGE_NAME: ghcr.io/claitonbatistibueno/agrofarm-mvp
+
+jobs:
+  # Gate: the full CI runs first. Skipped only for a rollback to an image that already passed it.
+  test:
+    if: inputs.image_tag == ''
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: test
+    if: always() && (needs.test.result == 'success' || inputs.image_tag != '')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      tag: ${{ steps.tag.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Choose the image tag
+        id: tag
+        run: |
+          if [ -n "${{ inputs.image_tag }}" ]; then
+            echo "value=${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"      # rollback
+          elif [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "value=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"       # release, e.g. v1.0.0
+          else
+            echo "value=${{ github.sha }}" >> "$GITHUB_OUTPUT"            # every commit on main
+          fi
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push the image
+        if: inputs.image_tag == ''
+        env:
+          TAG: ${{ steps.tag.outputs.value }}
+        run: |
+          docker build --platform linux/amd64 --build-arg APP_VERSION="$TAG" \
+            --label org.opencontainers.image.source="${{ github.server_url }}/${{ github.repository }}" \
+            -t "$IMAGE_NAME:$TAG" -t "$IMAGE_NAME:latest" .
+          docker push "$IMAGE_NAME:$TAG"
+          docker push "$IMAGE_NAME:latest"
+          echo "### Published \`$IMAGE_NAME:$TAG\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check the rollback image exists
+        if: inputs.image_tag != ''
+        run: docker manifest inspect "$IMAGE_NAME:${{ inputs.image_tag }}" > /dev/null
+
+  # Runs only after the repository variable AWS_DEPLOY is set to "true"
+  # (and the AWS secrets exist). Until then nothing is created in AWS.
+  deploy-aws:
+    needs: publish
+    if: always() && needs.publish.result == 'success' && vars.AWS_DEPLOY == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.url.outputs.value }}
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: cdk/package-lock.json
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Store the app secrets in SSM Parameter Store (free, encrypted)
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASS: ${{ secrets.DB_PASS }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          put() { [ -n "$2" ] && aws ssm put-parameter --name "/agrofarm/$1" --value "$2" --type SecureString --overwrite > /dev/null && echo "set /agrofarm/$1"; }
+          put DB_HOST "$DB_HOST"; put DB_PORT "${DB_PORT:-5432}"; put DB_NAME "${DB_NAME:-postgres}"
+          put DB_USER "$DB_USER"; put DB_PASS "$DB_PASS"; put DB_SSLMODE require
+          put ANTHROPIC_API_KEY "$ANTHROPIC_API_KEY" || true
+
+      - name: Create or update the infrastructure (AWS CDK, zero-cost guardrails tested in CI)
+        working-directory: cdk
+        env:
+          BUDGET_EMAIL: ${{ secrets.BUDGET_EMAIL }}
+        run: |
+          npm ci
+          npx cdk bootstrap --require-approval never   # one-off CDK setup, safe to repeat
+          npx cdk deploy AgroFarmStack --require-approval never --outputs-file outputs.json
+
+      - name: Roll out the image (SSM Run Command, automatic rollback if unhealthy)
+        working-directory: cdk
+        env:
+          TAG: ${{ needs.publish.outputs.tag }}
+          GH_USER: ${{ github.actor }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          INSTANCE=$(jq -r '.AgroFarmStack.InstanceId' outputs.json)
+          aws ssm wait instance-information-available --filters "Key=InstanceIds,Values=$INSTANCE" 2>/dev/null || sleep 60
+          for i in $(seq 1 20); do
+            aws ssm describe-instance-information --filters "Key=InstanceIds,Values=$INSTANCE" --query 'InstanceInformationList[0].PingStatus' --output text | grep -q Online && break
+            echo "waiting for the SSM agent..."; sleep 15
+          done
+          CMD=$(aws ssm send-command --instance-ids "$INSTANCE" --document-name AWS-RunShellScript \
+            --comment "deploy $TAG" \
+            --parameters "commands=[\"for i in \$(seq 1 30); do [ -x /opt/agrofarm/deploy.sh ] && break; sleep 10; done\",\"/opt/agrofarm/deploy.sh $IMAGE_NAME:$TAG $GH_USER $GH_TOKEN\"]" \
+            --query Command.CommandId --output text)
+          aws ssm wait command-executed --command-id "$CMD" --instance-id "$INSTANCE" || true
+          STATUS=$(aws ssm get-command-invocation --command-id "$CMD" --instance-id "$INSTANCE" --query Status --output text)
+          aws ssm get-command-invocation --command-id "$CMD" --instance-id "$INSTANCE" --query StandardOutputContent --output text | tail -20
+          echo "Deploy status: $STATUS"; [ "$STATUS" = "Success" ]
+
+      - name: Smoke test the live site
+        id: url
+        working-directory: cdk
+        run: |
+          URL=$(jq -r '.AgroFarmStack.SiteURL' outputs.json)
+          echo "value=$URL" >> "$GITHUB_OUTPUT"
+          echo "Testing $URL"
+          curl -fsS --retry 10 --retry-delay 6 --retry-all-errors "$URL/health.php?probe=ready" | tee health.json
+          grep -q '"status":"ok"' health.json
+          grep -q "\"version\":\"${{ needs.publish.outputs.tag }}\"" health.json || { echo "Live version is not ${{ needs.publish.outputs.tag }}"; exit 1; }
+          curl -fsS "$URL/login.php" | grep -qi "<title>" && echo "OK  login page"
+          echo "### Deployed \`${{ needs.publish.outputs.tag }}\` → $URL" >> "$GITHUB_STEP_SUMMARY"
