@@ -3,7 +3,7 @@
 # The database is external (Supabase in production, a Postgres container locally).
 # All configuration comes from environment variables (12-factor), never from files in the image.
 # =========================================================
-FROM php:8.2-apache
+FROM php:8.5-apache
 
 # PDO PostgreSQL driver (Supabase). curl and fileinfo are already built in.
 RUN apt-get update \
