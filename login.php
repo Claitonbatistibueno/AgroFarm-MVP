@@ -20,12 +20,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Brute-force protection (table is created automatically if the migration was not run)
     $pdo->exec("CREATE TABLE IF NOT EXISTS login_attempts (
-        id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        id SERIAL PRIMARY KEY,
         ip VARCHAR(45) NOT NULL,
-        attempted_at DATETIME NOT NULL,
-        KEY idx_ip_time (ip, attempted_at)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM login_attempts WHERE ip = ? AND attempted_at > (NOW() - INTERVAL " . LOCK_MINUTES . " MINUTE)");
+        attempted_at TIMESTAMP NOT NULL
+    )");
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM login_attempts WHERE ip = ? AND attempted_at > (NOW() - make_interval(mins => " . LOCK_MINUTES . "))");
     $stmt->execute([$ip]);
     $recentFailures = (int) $stmt->fetchColumn();
 

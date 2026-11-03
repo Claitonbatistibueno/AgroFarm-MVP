@@ -36,7 +36,7 @@ if (isset($_GET['delete'])) {
 
 // --- 2---
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'save_breed') {
-    $type_id = $_POST['type_id'];
+    $type_id = $_POST['type_id'] ?? '';
     $species = $_POST['species'];
     $breed   = trim($_POST['breed']);
     $desc    = trim($_POST['description']);

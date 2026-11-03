@@ -17,3 +17,10 @@ temp_request_*.json
 # Demo company logos used by database/farmproject.sql
 !uploads/1770551869_69887a3d706f8.png
 !uploads/1770553734_6988818663a70.webp
+# Tooling
+vendor/
+node_modules/
+cdk/cdk.out/
+e2e/playwright-report/
+e2e/test-results/
+.phpunit.cache/

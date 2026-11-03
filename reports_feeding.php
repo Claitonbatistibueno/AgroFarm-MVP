@@ -220,7 +220,7 @@ $lots_opts = $conn->query("SELECT lot_id, name FROM lot ORDER BY name ASC");
                     <div class="kpi-icon"><i class="fa-solid fa-weight-hanging"></i></div>
                     <div>
                         <div class="kpi-label">Total Consumed</div>
-                        <div class="kpi-val"><?php echo number_format($kpi_data['total_kg'], 1); ?> <small class="fs-6 text-muted">kg</small></div>
+                        <div class="kpi-val"><?php echo number_format((float) ($kpi_data['total_kg'] ?? 0), 1); ?> <small class="fs-6 text-muted">kg</small></div>
                     </div>
                 </div>
             </div>
@@ -229,7 +229,7 @@ $lots_opts = $conn->query("SELECT lot_id, name FROM lot ORDER BY name ASC");
                     <div class="kpi-icon" style="color: #facc15; background: rgba(250, 204, 21, 0.1);"><i class="fa-solid fa-euro-sign"></i></div>
                     <div>
                         <div class="kpi-label">Total Cost (Est)</div>
-                        <div class="kpi-val">€ <?php echo number_format($kpi_data['total_cost'], 2); ?></div>
+                        <div class="kpi-val">€ <?php echo number_format((float) ($kpi_data['total_cost'] ?? 0), 2); ?></div>
                     </div>
                 </div>
             </div>
@@ -238,7 +238,7 @@ $lots_opts = $conn->query("SELECT lot_id, name FROM lot ORDER BY name ASC");
                     <div class="kpi-icon" style="color: #60a5fa; background: rgba(96, 165, 250, 0.1);"><i class="fa-solid fa-scale-balanced"></i></div>
                     <div>
                         <div class="kpi-label">Avg / Feeding</div>
-                        <div class="kpi-val"><?php echo number_format($kpi_data['avg_consumption'], 2); ?> <small class="fs-6 text-muted">kg</small></div>
+                        <div class="kpi-val"><?php echo number_format((float) ($kpi_data['avg_consumption'] ?? 0), 2); ?> <small class="fs-6 text-muted">kg</small></div>
                     </div>
                 </div>
             </div>

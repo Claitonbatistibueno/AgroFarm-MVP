@@ -1,4 +1,4 @@
-import mysql.connector
+import psycopg
 from datetime import datetime, timedelta
 
 # Database configuration
@@ -14,11 +14,12 @@ def _load_env():
                 k, v = line.split('=', 1)
                 _os.environ.setdefault(k.strip(), v.strip().strip('"\''))
     return {
-        'host': _os.environ.get('DB_HOST', 'localhost'),
-        'port': int(_os.environ.get('DB_PORT', 3306)),
-        'user': _os.environ.get('DB_USER', 'root'),
+        'host': _os.environ.get('DB_HOST', '127.0.0.1'),
+        'port': int(_os.environ.get('DB_PORT', 5432)),
+        'user': _os.environ.get('DB_USER', 'postgres'),
         'password': _os.environ.get('DB_PASS', ''),
-        'database': _os.environ.get('DB_NAME', 'farmproject'),
+        'dbname': _os.environ.get('DB_NAME', 'agrofarm'),
+        'sslmode': _os.environ.get('DB_SSLMODE', 'prefer'),
     }
 
 db_config = _load_env()
@@ -26,7 +27,7 @@ db_config = _load_env()
 def simulate_anomaly():
     connection = None
     try:
-        connection = mysql.connector.connect(**db_config)
+        connection = psycopg.connect(**db_config)
         cursor = connection.cursor()
 
         # 1. First, find a real animal ID that already exists in your database
@@ -62,7 +63,7 @@ def simulate_anomaly():
     except Exception as e:
         print(f"❌ Simulation Error: {e}")
     finally:
-        if connection and connection.is_connected():
+        if connection and not connection.closed:
             cursor.close()
             connection.close()
 

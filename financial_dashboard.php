@@ -28,7 +28,7 @@ $companies = $pdo->query("SELECT company_id, name FROM company ORDER BY name ASC
 
 // Define a empresa ativa (Sessão ou GET para troca rápida)
 if (isset($_GET['context_company'])) {
-    $_SESSION['active_company_id'] = $_GET['context_company'];
+    $_SESSION['active_company_id'] = (int) $_GET['context_company'];
     // Redireciona para limpar a URL
     header("Location: financial_dashboard.php");
     exit;
@@ -39,7 +39,7 @@ if (!isset($_SESSION['active_company_id']) && count($companies) > 0) {
     $_SESSION['active_company_id'] = $companies[0]['company_id'];
 }
 
-$actCompanyId = $_SESSION['active_company_id'];
+$actCompanyId = (int) ($_SESSION['active_company_id'] ?? 0);
 $actCompanyName = "Select Company";
 foreach ($companies as $c) {
     if ($c['company_id'] == $actCompanyId) $actCompanyName = $c['name'];
@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$actCompanyId, $_POST['animal_id'], $_POST['client_id'], $_POST['sale_date'], $_POST['final_weight'], $_POST['price_per_unit'], $totalValue]);
 
             // Update status animal
-            $pdo->prepare("UPDATE animal SET status = 'Sold' WHERE animal_id = ?")->execute([$_POST['animal_id']]);
+            $pdo->prepare("UPDATE animal SET status = 'sold' WHERE animal_id = ?")->execute([$_POST['animal_id']]);
             $pdo->commit();
             $msg = '<div class="glass-alert success"><i class="fa-solid fa-check"></i> Sale registered & Animal archived!</div>';
         } catch (Exception $e) { 
@@ -100,22 +100,22 @@ $activeAnimals = $pdo->prepare("
     FROM animal a 
     JOIN lot_animals la ON a.animal_id = la.animal_id 
     JOIN lot l ON la.lot_id = l.lot_id 
-    WHERE l.company_id = ? AND a.status = 'Active'
+    WHERE l.company_id = ? AND a.status = 'active'
     ORDER BY a.tag_number ASC
 ");
 $activeAnimals->execute([$actCompanyId]);
 $animalsList = $activeAnimals->fetchAll();
 
 // KPIs
-$sqlRev = "SELECT COALESCE(SUM(total_value), 0) FROM sales WHERE company_id = ? AND MONTH(sale_date) = MONTH(CURRENT_DATE()) AND YEAR(sale_date) = YEAR(CURRENT_DATE())";
+$sqlRev = "SELECT COALESCE(SUM(total_value), 0) FROM sales WHERE company_id = ? AND date_trunc('month', sale_date) = date_trunc('month', CURRENT_DATE)";
 $stmt = $pdo->prepare($sqlRev); $stmt->execute([$actCompanyId]);
 $kpiSales = $stmt->fetchColumn();
 
-$sqlExp1 = "SELECT COALESCE(SUM(amount), 0) FROM accounts_payable WHERE company_id = ? AND MONTH(due_date) = MONTH(CURRENT_DATE()) AND YEAR(due_date) = YEAR(CURRENT_DATE())";
+$sqlExp1 = "SELECT COALESCE(SUM(amount), 0) FROM accounts_payable WHERE company_id = ? AND date_trunc('month', due_date) = date_trunc('month', CURRENT_DATE)";
 $stmt = $pdo->prepare($sqlExp1); $stmt->execute([$actCompanyId]);
 $exp1 = $stmt->fetchColumn();
 
-$sqlExp2 = "SELECT COALESCE(SUM(oc.cost_value), 0) FROM operational_costs oc JOIN lot l ON oc.lot_id = l.lot_id WHERE l.company_id = ? AND MONTH(oc.cost_date) = MONTH(CURRENT_DATE())";
+$sqlExp2 = "SELECT COALESCE(SUM(oc.cost_value), 0) FROM operational_costs oc JOIN lot l ON oc.lot_id = l.lot_id WHERE l.company_id = ? AND date_trunc('month', oc.cost_date) = date_trunc('month', CURRENT_DATE)";
 $stmt = $pdo->prepare($sqlExp2); $stmt->execute([$actCompanyId]);
 $exp2 = $stmt->fetchColumn();
 $kpiExpenses = $exp1 + $exp2;
@@ -125,15 +125,17 @@ $kpiProfit = $kpiSales - $kpiExpenses;
 // Ledger 
 $sqlLedger = "
     SELECT * FROM (
-        SELECT 'expense' as type, description as 'desc', amount, due_date as t_date 
-        FROM accounts_payable WHERE company_id = $actCompanyId
+        SELECT 'expense' as type, description as \"desc\", amount, due_date as t_date 
+        FROM accounts_payable WHERE company_id = ?
         UNION ALL
-        SELECT 'sale' as type, CONCAT('Sale Animal #', animal_id) as 'desc', total_value as amount, sale_date as t_date 
-        FROM sales WHERE company_id = $actCompanyId
+        SELECT 'sale' as type, CONCAT('Sale Animal #', animal_id) as \"desc\", total_value as amount, sale_date as t_date 
+        FROM sales WHERE company_id = ?
     ) as combined_ledger
     ORDER BY t_date DESC LIMIT 10
 ";
-$ledgerData = $pdo->query($sqlLedger)->fetchAll();
+$stmtLedger = $pdo->prepare($sqlLedger);
+$stmtLedger->execute([$actCompanyId, $actCompanyId]);
+$ledgerData = $stmtLedger->fetchAll();
 
 ?>
 <!DOCTYPE html>

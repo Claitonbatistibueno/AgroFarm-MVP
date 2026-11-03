@@ -1,4 +1,4 @@
-mysql-connector-python
+psycopg[binary]
 pandas
 numpy
 scikit-learn

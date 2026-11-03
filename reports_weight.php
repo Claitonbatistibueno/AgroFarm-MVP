@@ -404,7 +404,7 @@ $companies = $conn->query("SELECT * FROM company ORDER BY name");
                             </td>
                             <td>
                                 <span class="<?= $row['adg'] >= 1.2 ? 'text-success' : ($row['adg'] < 0.8 ? 'text-danger' : 'text-warning') ?> fw-bold">
-                                    <?= number_format($row['adg'], 3) ?>
+                                    <?= number_format((float) ($row['adg'] ?? 0), 3) ?>
                                 </span> kg/d
                             </td>
                             <td>

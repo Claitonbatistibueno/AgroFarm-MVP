@@ -3,7 +3,7 @@ Options -Indexes
 DirectoryIndex index.html login.php
 
 # Never serve secrets, database dumps, logs or source tooling
-<FilesMatch "(^\.env.*|\.sql|\.log|\.md|\.py|\.ini)$">
+<FilesMatch "(^\.env.*|\.sql|\.log|\.md|\.py|\.ini|\.neon|\.xml|\.lock|\.ya?ml|\.toml)$">
     Require all denied
 </FilesMatch>
 <FilesMatch "^(ai_error_log\.txt|ai_alerts\.txt|ai_analysis\.json|temp_request_.*\.json|New Text Document\.txt|teste\.cvs)$">
@@ -12,4 +12,4 @@ DirectoryIndex index.html login.php
 <FilesMatch "^(vet_ai\.php)$">
     Require all denied
 </FilesMatch>
-RedirectMatch 404 ^/?(.*/)?(\.git|\.idea|\.venv|database|tools)(/|$)
+RedirectMatch 404 ^/?(.*/)?(\.git|\.github|\.idea|\.venv|database|tools|lib|tests|e2e|cdk|docker|docs|vendor|node_modules)(/|$)
