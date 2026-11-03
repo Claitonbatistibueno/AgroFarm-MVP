@@ -79,9 +79,10 @@ Branching: GitHub Flow (`feat/…`, `fix/…`, `ci/…` → PR → `main`), Conv
 
 The AWS part is **off** until you enable it, so nothing is created or billed by accident.
 
-* One **t3.micro** (Free Plan eligible), public subnet, **no** NAT gateway, load balancer, RDS or Elastic IP — CI tests fail if any of these appear.
+* One **t4g.micro** (ARM, the cheapest Free Plan instance type) in **Frankfurt (eu-central-1)**, the same region as the Supabase project, 8 GB disk, public subnet, **no** NAT gateway, load balancer, RDS or Elastic IP — CI tests fail if any of these appear or if a non-Free-Plan instance type is used.
+* Estimated gross usage ≈ **US$ 11/month** (instance ≈ 7, public IPv4 ≈ 3.65, disk ≈ 0.8), paid from the Free Plan credits — the account itself is never charged.
 * The database stays on Supabase (free), the image on GHCR (free).
-* A **budget alert** e-mails you at 50 % / 100 % of `BUDGET_USD` (gross usage before credits).
+* A **budget alert** (default US$ 15) e-mails you at 50 % / 100 % and when the forecast passes the limit (gross usage before credits).
 * Admin through **SSM** (no SSH port, no keys). Secrets in **SSM Parameter Store** (standard tier, free).
 
 To enable: add the repository **secrets** `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `ANTHROPIC_API_KEY`, `BUDGET_EMAIL`, then the repository **variable** `AWS_DEPLOY=true`. The next push to `main` creates the server and deploys.

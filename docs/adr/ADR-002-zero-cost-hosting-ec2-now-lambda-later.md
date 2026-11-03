@@ -15,13 +15,14 @@ My Astro project runs its container on ECS Fargate behind a load balancer. That 
 | Option | Verdict |
 |---|---|
 | ECS Fargate + ALB + RDS (same as Astro) | Rejected: ~$40–60/month; burns the credits in a few months |
-| **EC2 t3.micro running the Docker image, database on Supabase** | **Accepted now**: one small server, covered by the Free Plan, same container as CI |
+| **EC2 t4g.micro (ARM) running the Docker image, database on Supabase** | **Accepted now**: the cheapest instance type a Free Plan account can launch, same container as CI |
 | Lambda + Bref (PHP on Lambda), database on Supabase | **Planned**: always free, but sessions and uploads must leave the local disk first |
 | Lightsail | Rejected: fixed monthly price after any free period |
 
 ## Decision
 
-- **Now:** CDK stack with one t3.micro, a public subnet, no NAT gateway, no load balancer, no RDS, no Elastic IP. The image comes from GitHub Container Registry (free) instead of ECR.
+- **Now:** CDK stack with one **t4g.micro** (ARM) in **eu-central-1**, the same region as the Supabase project (a page runs several queries; another region would add ~25 ms to each). 8 GB disk, a public subnet, no NAT gateway, no load balancer, no RDS, no Elastic IP. The image comes from GitHub Container Registry (free) instead of ECR and is built for amd64 and arm64.
+- Free Plan accounts can only launch `t3.micro`, `t3.small`, `t4g.micro`, `t4g.small`, `c7i-flex.large`, `m7i-flex.large`; the stack refuses anything else. Estimated gross usage ≈ US$ 11/month (t4g.micro ≈ 7, public IPv4 ≈ 3.65, 8 GB gp3 ≈ 0.8), paid from the credits.
 - Deploys use **SSM Run Command** (no SSH port, no keys). The script on the server swaps the container, checks `/health.php?probe=ready`, and **rolls back to the previous container** if the new one is not healthy in 60 s.
 - Secrets live in **SSM Parameter Store** (standard tier, free), written by the pipeline from GitHub secrets.
 - A **budget alert** e-mails me at 50 % and 100 % of the monthly limit, measuring gross usage before credits, so I can see how fast credits go.

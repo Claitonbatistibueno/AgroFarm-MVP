@@ -24,7 +24,7 @@ permissions:
   contents: read
 
 env:
-  AWS_REGION: eu-west-1
+  AWS_REGION: eu-central-1   # Frankfurt, same region as the Supabase project
   IMAGE_NAME: ghcr.io/claitonbatistibueno/agrofarm-mvp
 
 jobs:
@@ -63,17 +63,33 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push the image
+      # Two architectures: amd64 (PCs, CI) and arm64 (the t4g.micro server, the cheapest Free Plan type)
+      - name: Set up QEMU (to build the ARM image on an x86 runner)
         if: inputs.image_tag == ''
-        env:
-          TAG: ${{ steps.tag.outputs.value }}
-        run: |
-          docker build --platform linux/amd64 --build-arg APP_VERSION="$TAG" \
-            --label org.opencontainers.image.source="${{ github.server_url }}/${{ github.repository }}" \
-            -t "$IMAGE_NAME:$TAG" -t "$IMAGE_NAME:latest" .
-          docker push "$IMAGE_NAME:$TAG"
-          docker push "$IMAGE_NAME:latest"
-          echo "### Published \`$IMAGE_NAME:$TAG\`" >> "$GITHUB_STEP_SUMMARY"
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: inputs.image_tag == ''
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push the image (linux/amd64 + linux/arm64)
+        if: inputs.image_tag == ''
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: APP_VERSION=${{ steps.tag.outputs.value }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.value }}
+            ${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Summary
+        if: inputs.image_tag == ''
+        run: echo "### Published \`$IMAGE_NAME:${{ steps.tag.outputs.value }}\` (amd64 + arm64)" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Check the rollback image exists
         if: inputs.image_tag != ''
