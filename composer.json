@@ -1,0 +1,29 @@
+{
+    "name": "claitonbatistibueno/agrofarm-mvp",
+    "description": "AgroFarm - livestock farm management for family beef farms",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": ">=8.2",
+        "ext-pdo": "*",
+        "ext-pdo_pgsql": "*",
+        "ext-curl": "*",
+        "ext-fileinfo": "*"
+    },
+    "require-dev": {
+        "php-parallel-lint/php-parallel-lint": "^1.4",
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^11.5"
+    },
+    "scripts": {
+        "lint": "parallel-lint --exclude vendor --exclude e2e/node_modules --exclude cdk/node_modules .",
+        "analyse": "phpstan analyse --no-progress --memory-limit=512M",
+        "test": "phpunit"
+    },
+    "config": {
+        "sort-packages": true,
+        "platform": {
+            "php": "8.2"
+        }
+    }
+}

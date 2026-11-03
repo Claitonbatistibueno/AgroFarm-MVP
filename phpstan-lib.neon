@@ -1,0 +1,9 @@
+# Stricter analysis for the new shared code (helpers, database layer, AI client).
+parameters:
+    level: 5
+    paths:
+        - lib
+        - vet_ai.php
+        - health.php
+    bootstrapFiles:
+        - tests/phpstan-bootstrap.php
