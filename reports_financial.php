@@ -57,7 +57,7 @@ SELECT * FROM (
     SELECT 
         cost_date as trans_date, 
         'Expense' as type, 
-        CONCAT(UCASE(LEFT(category, 1)), SUBSTRING(category, 2)) as category, 
+        CONCAT(UPPER(LEFT(category, 1)), SUBSTRING(category, 2)) as category, 
         COALESCE(description, 'Custo Operacional') as description,
         cost_value as amount
     FROM operational_costs oc

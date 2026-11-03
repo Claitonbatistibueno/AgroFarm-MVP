@@ -17,10 +17,10 @@ const VET_AI_SCHEMA_KEYS = ['summary', 'hypotheses', 'justification', 'questions
                             'safe_actions', 'warnings', 'references', 'confidence'];
 
 /** Profile + last weighings + last treatments for one animal. */
-function vet_ai_animal_data(mysqli $conn, int $animalId): ?array {
+function vet_ai_animal_data(FarmDb $conn, int $animalId): ?array {
     $stmt = $conn->prepare(
         "SELECT a.animal_id, a.tag_number, a.sex, a.birth_date, a.status,
-                t.species, t.breed, DATEDIFF(NOW(), a.birth_date) AS age_days
+                t.species, t.breed, (CURRENT_DATE - a.birth_date) AS age_days
            FROM animal a
            LEFT JOIN animal_types t ON a.type_id = t.type_id
           WHERE a.animal_id = ?");
@@ -33,7 +33,7 @@ function vet_ai_animal_data(mysqli $conn, int $animalId): ?array {
                              WHERE animal_id = ? ORDER BY weighing_date DESC LIMIT 5");
     $stmt->bind_param('i', $animalId);
     $stmt->execute();
-    $weights = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $weights = $stmt->get_result()->fetch_all();
 
     $stmt = $conn->prepare("SELECT h.treatment_date, h.diagnosis, m.item_name
                               FROM health_records h
@@ -41,7 +41,7 @@ function vet_ai_animal_data(mysqli $conn, int $animalId): ?array {
                              WHERE h.animal_id = ? ORDER BY h.treatment_date DESC LIMIT 5");
     $stmt->bind_param('i', $animalId);
     $stmt->execute();
-    $health = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $health = $stmt->get_result()->fetch_all();
 
     return ['profile' => $profile, 'weight_history' => $weights, 'health_history' => $health];
 }
@@ -100,7 +100,7 @@ function vet_ai_parse_json(string $text): ?array {
 
 /** Normalise the report so the page can render it without surprises. */
 function vet_ai_normalise(array $r): array {
-    $list = fn($v) => array_values(array_filter(array_map('strval', is_array($v) ? $v : []), 'strlen'));
+    $list = fn($v) => array_values(array_filter(array_map('strval', is_array($v) ? $v : []), fn(string $s): bool => $s !== ''));
     $hyps = [];
     foreach (($r['hypotheses'] ?? []) as $h) {
         if (!is_array($h) || empty($h['name'])) { continue; }
@@ -123,7 +123,7 @@ function vet_ai_normalise(array $r): array {
  * Run the analysis.
  * @return array ['report' => array] on success, ['error' => string] on failure.
  */
-function vet_ai_analyse(mysqli $conn, int $animalId, ?float $temperature, array $symptoms,
+function vet_ai_analyse(FarmDb $conn, int $animalId, ?float $temperature, array $symptoms,
                         string $observations, ?string $imagePath = null): array {
     $apiKey = env('ANTHROPIC_API_KEY');
     if (!$apiKey) {

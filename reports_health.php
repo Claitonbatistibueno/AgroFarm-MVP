@@ -366,7 +366,7 @@ while ($row = $result->fetch_assoc()) {
                         </td>
                         <td>
                             <span style="color:#4ade80;"><?= e($row['item_name']) ?></span><br>
-                            <small style="color:#64748b; font-size:10px;"><?= ucfirst($row['med_type']) ?></small>
+                            <small style="color:#64748b; font-size:10px;"><?= e(ucfirst((string) ($row['med_type'] ?? ''))) ?></small>
                         </td>
                         <td style="font-size:12px; color:#cbd5e1;"><?= $row['vet_name'] ?: '-' ?></td>
                         <td>

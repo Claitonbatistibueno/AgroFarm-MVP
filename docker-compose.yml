@@ -1,0 +1,41 @@
+# Run the whole AgroFarm locally, same image as production:
+#   docker compose up --build
+#   open http://localhost:8080   (login: demo / AgroFarm2026!)
+# The local database is a plain PostgreSQL loaded with database/supabase.sql.
+# To use Supabase instead, put its credentials in .env and run only the web service.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: agrofarm
+      POSTGRES_USER: agrofarm
+      POSTGRES_PASSWORD: agrofarm
+    volumes:
+      - ./database/supabase.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agrofarm -d agrofarm"]
+      interval: 5s
+      retries: 20
+
+  web:
+    build: .
+    image: agrofarm:local
+    ports:
+      - "8080:80"
+    environment:
+      DB_HOST: db
+      DB_NAME: agrofarm
+      DB_USER: agrofarm
+      DB_PASS: agrofarm
+      DB_SSLMODE: disable
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes:
+      - uploads:/var/www/html/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:
+  uploads:

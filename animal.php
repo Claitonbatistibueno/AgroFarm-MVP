@@ -123,7 +123,7 @@ $params = [];
 $types = "";
 
 if (!empty($search_query)) {
-    $sql_animals .= " AND (a.tag_number LIKE ? OR t.breed LIKE ?) ";
+    $sql_animals .= " AND (a.tag_number ILIKE ? OR t.breed ILIKE ?) ";
     $search_term = "%" . $search_query . "%";
     $params[] = $search_term; $params[] = $search_term;
     $types .= "ss";

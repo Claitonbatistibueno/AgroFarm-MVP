@@ -30,43 +30,63 @@ Welcome to **Farm-Project**, this is my project submission for the Immersive Sof
 
 ## 🛠️ Technologies Used
 
-* **Backend:** PHP 8.1+ (mysqli + PDO, prepared statements everywhere)
-* **Database:** MariaDB / MySQL
+* **Backend:** PHP 8.2 (PDO, prepared statements everywhere)
+* **Database:** PostgreSQL on **Supabase** (free plan)
 * **Frontend:** HTML, Bootstrap, Chart.js, jsPDF
 * **AI Clinical Assistant:** Claude API (`vet_ai.php`) — reads the animal's record, vitals, symptoms and an optional photo, adds PubMed evidence, returns a structured differential
 * **Herd analytics (offline):** Python + scikit-learn (`tools/previsao_ia.py`)
+* **Delivery:** Docker, GitHub Actions, GitHub Container Registry, AWS (EC2 + SSM via CDK)
 
-## 🔐 Security (MVP hardening)
+## 🔐 Security
 
-* Passwords stored with `password_hash` (bcrypt). Old plain-text passwords are upgraded automatically on the next successful login.
+* Passwords stored with `password_hash` (bcrypt); plain-text legacy passwords are upgraded on the next login.
 * Login brute-force lock (5 failures / 15 min per IP).
 * CSRF token on every form, delete link and `fetch()` call (injected automatically by `config.php`).
-* All SQL uses prepared statements; all output is HTML-escaped.
-* Uploads: extension + MIME whitelist, random file names, PHP execution disabled in `uploads/`.
-* Secrets live only in `.env` (never committed). `.htaccess` blocks `.env`, SQL dumps, `tools/`, `database/` and `.git`.
+* Prepared statements and HTML escaping on every page.
+* Uploads: extension + MIME whitelist, random names, no PHP execution in `uploads/`.
+* Secrets only in `.env` / GitHub secrets / AWS SSM Parameter Store — never in the code.
+* Supabase REST API locked: RLS on every table, no grants for the `anon` / `authenticated` roles.
+* CI scans every commit for leaked secrets (gitleaks) and vulnerable dependencies.
 
-## 🚀 Run locally (XAMPP)
+## 🗄️ Database (Supabase)
 
-1. Copy the project to `C:\xampp\htdocs\farmproject`.
-2. In phpMyAdmin create a database `farmproject` and import **`database/farmproject.sql`** (demo data, no personal data).
-   *Already have the old database?* Import only **`database/migrations_001_mvp.sql`** instead.
-3. Copy `.env.example` to `.env` and fill in the values (for XAMPP the defaults `root` / empty password work).
-4. Add your Claude API key to `.env` → `ANTHROPIC_API_KEY=sk-ant-...` (create one at https://console.anthropic.com).
-5. Open `http://localhost/farmproject/` → **Log in**.
-   Demo login: **`demo` / `AgroFarm2026!`** — change it in *Users* after the first login.
+1. Create a free project at [supabase.com](https://supabase.com) (region **West EU (Ireland)**).
+2. **SQL Editor → New query**, paste [`database/supabase.sql`](database/supabase.sql) and **Run**. It creates the tables, the demo data and the security rules.
+   If the editor stops part-way on the big file, run the same script split into small files instead: [`database/supabase-parts/`](database/supabase-parts/) `part1` → `part8`, one query each, in order (part 1 cleans any half-created tables, so it is safe to start again).
+3. **Connect → Session pooler** gives the values for `.env`: host, port `5432`, database `postgres`, user `postgres.<project-ref>`, your database password, `DB_SSLMODE=require`.
 
-> Login is now **username + password** (the 6-digit login code is no longer used to sign in).
+Demo login: **`demo` / `AgroFarm2026!`** — change it in *Users* after the first login.
 
-## 🌍 Deploy online (any PHP + MySQL host)
+## 🚀 Run locally
 
-Works on shared hosting (e.g. cPanel hosts) or a small VPS — no Python needed on the server.
+**With Docker (recommended):** `docker compose up --build` → http://localhost:8080 (a local PostgreSQL is loaded with the same script).
 
-1. Requirements: PHP 8.1+ with `mysqli`, `pdo_mysql`, `curl`, `fileinfo`; MariaDB/MySQL; Apache with `AllowOverride All` (or replicate `.htaccess` rules in nginx).
-2. Upload the files (FTP or `git clone`). Do **not** upload `.env` from your PC — create a new one on the server from `.env.example`.
-3. Create the database + user in the host panel and import `database/farmproject.sql`.
-4. In `.env` set `APP_ENV=production`, the DB credentials from the host, and `ANTHROPIC_API_KEY`.
-5. Enable HTTPS (Let's Encrypt in the host panel). Session cookies become `Secure` automatically.
-6. Log in as `demo`, create your real user, then delete or change the demo user.
+**With XAMPP:** enable `extension=pdo_pgsql` in `php.ini`, copy `.env.example` to `.env` with your Supabase values, open `http://localhost/agrofarm-mvp/`.
+
+## 🔄 CI/CD pipeline
+
+| Workflow | When | What it does |
+|---|---|---|
+| `ci.yml` — Continuous Integration | every PR, and called by Deploy | gitleaks secret scan → PHP lint → PHPStan → PHPUnit → `composer audit` → Python lint → loads `supabase.sql` into PostgreSQL → integration smoke test → herd analytics run → Playwright E2E (desktop + mobile) with axe → CDK tests (zero-cost guardrails) |
+| `container-ci.yml` — Container Check | every PR | builds the production image, runs it with PostgreSQL, waits for `HEALTHCHECK`, smoke test incl. `.htaccess` rules, checks JSON logs |
+| `deploy.yml` — Deploy | push to `main`, tags `v*`, manual | CI gate → image to GHCR (`sha`, `latest`, `vX.Y.Z`) → *(if enabled)* CDK deploy → rollout via SSM with automatic rollback → live smoke test |
+| `deploy.yml` → *Run workflow* with `image_tag` | manual | **rollback**: redeploys an existing image, no rebuild |
+| `keep-supabase-awake.yml` | every 3 days | one query so the free Supabase project is not paused |
+
+Branching: GitHub Flow (`feat/…`, `fix/…`, `ci/…` → PR → `main`), Conventional Commits.
+
+## ☁️ AWS at zero cost
+
+The AWS part is **off** until you enable it, so nothing is created or billed by accident.
+
+* One **t3.micro** (Free Plan eligible), public subnet, **no** NAT gateway, load balancer, RDS or Elastic IP — CI tests fail if any of these appear.
+* The database stays on Supabase (free), the image on GHCR (free).
+* A **budget alert** e-mails you at 50 % / 100 % of `BUDGET_USD` (gross usage before credits).
+* Admin through **SSM** (no SSH port, no keys). Secrets in **SSM Parameter Store** (standard tier, free).
+
+To enable: add the repository **secrets** `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `ANTHROPIC_API_KEY`, `BUDGET_EMAIL`, then the repository **variable** `AWS_DEPLOY=true`. The next push to `main` creates the server and deploys.
+
+> Plan after the 6-month Free Plan: move the PHP app to AWS Lambda (always-free tier) with Bref — see [ADR-002](docs/adr/ADR-002-zero-cost-hosting-ec2-now-lambda-later.md).
 
 ## 🧠 Optional: herd analytics script
 

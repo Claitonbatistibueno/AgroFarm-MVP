@@ -1,9 +1,7 @@
-import mysql.connector
+import psycopg
 import pandas as pd
-import numpy as np
 import json
 import os
-import sys
 from datetime import datetime, timedelta
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import IsolationForest
@@ -21,11 +19,12 @@ def _load_env():
                 k, v = line.split('=', 1)
                 _os.environ.setdefault(k.strip(), v.strip().strip('"\''))
     return {
-        'host': _os.environ.get('DB_HOST', 'localhost'),
-        'port': int(_os.environ.get('DB_PORT', 3306)),
-        'user': _os.environ.get('DB_USER', 'root'),
+        'host': _os.environ.get('DB_HOST', '127.0.0.1'),
+        'port': int(_os.environ.get('DB_PORT', 5432)),
+        'user': _os.environ.get('DB_USER', 'postgres'),
         'password': _os.environ.get('DB_PASS', ''),
-        'database': _os.environ.get('DB_NAME', 'farmproject'),
+        'dbname': _os.environ.get('DB_NAME', 'agrofarm'),
+        'sslmode': _os.environ.get('DB_SSLMODE', 'prefer'),
     }
 
 DB_CONFIG = _load_env()
@@ -38,49 +37,49 @@ TARGET_WEIGHT_FINISHING = 650.0  # kg
 MARKET_PRICE_AVG = 3.20          # $/kg live weight
 
 def get_db_connection():
-    return mysql.connector.connect(**DB_CONFIG)
+    return psycopg.connect(**DB_CONFIG)
 
 def analyze_herd():
     conn = get_db_connection()
-    
+
     # 1. Fetch comprehensive dataset
     # Joining Animal, Breed, and most recent weighing data
     query = """
-        SELECT 
-            a.animal_id, 
-            a.tag_number, 
+        SELECT
+            a.animal_id,
+            a.tag_number,
             at.breed,
             a.birth_date,
             w.weight_kg,
             w.weighing_date,
-            DATEDIFF(NOW(), a.birth_date) as age_days
+            (CURRENT_DATE - a.birth_date) as age_days
         FROM animal a
         JOIN animal_types at ON a.type_id = at.type_id
         JOIN weighing w ON a.animal_id = w.animal_id
         WHERE a.status = 'active'
         ORDER BY a.animal_id, w.weighing_date ASC
     """
-    
+
     df = pd.read_sql(query, conn)
-    
+
     # 2. Fetch Health History (Last 60 days) to correlate
     health_query = """
-        SELECT animal_id, COUNT(*) as recent_treatments 
-        FROM health_records 
-        WHERE treatment_date >= DATE_SUB(NOW(), INTERVAL 60 DAY)
+        SELECT animal_id, COUNT(*) as recent_treatments
+        FROM health_records
+        WHERE treatment_date >= CURRENT_DATE - INTERVAL '60 days'
         GROUP BY animal_id
     """
     df_health = pd.read_sql(health_query, conn)
-    
+
     conn.close()
 
     if df.empty:
         return {"status": "error", "message": "No weighing data found."}
 
     # --- INTELLIGENCE PROCESSING ---
-    
+
     animals_analysis = []
-    
+
     # Group by animal to calculate individual metrics
     for animal_id, group in df.groupby('animal_id'):
         if len(group) < 2:
@@ -88,29 +87,28 @@ def analyze_herd():
 
         # Sort by date
         group = group.sort_values('weighing_date')
-        
+
         # Current status
         current_weight = group.iloc[-1]['weight_kg']
-        last_date = group.iloc[-1]['weighing_date']
         breed = group.iloc[0]['breed']
         tag = group.iloc[0]['tag_number']
-        
+
         # Calculate ADG (Average Daily Gain) - Local Slope
         # Using Linear Regression on the last 5 weights for precision
         reg_data = group.tail(5).copy()
         reg_data['days_ordinal'] = pd.to_datetime(reg_data['weighing_date']).map(datetime.toordinal)
-        
+
         model = LinearRegression()
         X = reg_data['days_ordinal'].values.reshape(-1, 1)
         y = reg_data['weight_kg'].values
         model.fit(X, y)
-        
+
         adg_projected = model.coef_[0] # kg per day gain trend
-        
+
         # Predict Days to Target
         days_to_target = 0
         predicted_finish_date = "N/A"
-        
+
         if adg_projected > 0.1:
             remaining_weight = TARGET_WEIGHT_FINISHING - current_weight
             if remaining_weight > 0:
@@ -119,24 +117,24 @@ def analyze_herd():
                 predicted_finish_date = finish_date_obj.strftime('%Y-%m-%d')
             else:
                 predicted_finish_date = "Ready"
-        
+
         # Health Risk Analysis (The "Surprise")
         # Logic: If ADG is significantly below breed average or negative, flag it.
         health_risk = "Low"
         health_score = 100
-        
+
         if adg_projected < 0:
             health_risk = "Critical (Weight Loss)"
             health_score = 40
         elif adg_projected < 0.6: # Assuming 0.6kg is a threshold for cattle
             health_risk = "Warning (Stunted Growth)"
             health_score = 70
-            
+
         # Correlate with recent medical history
         recent_sick = df_health[df_health['animal_id'] == animal_id]['recent_treatments'].sum()
         if recent_sick > 0:
             health_score -= (recent_sick * 10)
-            
+
         animals_analysis.append({
             'id': int(animal_id),
             'tag': tag,
@@ -154,10 +152,10 @@ def analyze_herd():
     if len(animals_analysis) > 5:
         analysis_df = pd.DataFrame(animals_analysis)
         X_anomaly = analysis_df[['weight', 'adg', 'health_score']].values
-        
+
         iso_forest = IsolationForest(contamination=0.1, random_state=42)
         analysis_df['anomaly'] = iso_forest.fit_predict(X_anomaly)
-        
+
         # -1 indicates anomaly
         for index, row in analysis_df.iterrows():
             if row['anomaly'] == -1 and row['health_score'] > 60:
@@ -181,7 +179,7 @@ def analyze_herd():
     # Save
     with open(JSON_FILE, 'w') as f:
         json.dump(final_output, f, indent=4)
-        
+
     print("Intelligence cycle complete.")
 
 if __name__ == "__main__":

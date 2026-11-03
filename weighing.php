@@ -16,7 +16,7 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 $animalsList = [];
 try {
     $stmtAnimals = $conn->query("SELECT animal_id, tag_number FROM animal WHERE status = 'active' ORDER BY tag_number ASC");
-    $animalsList = $stmtAnimals->fetch_all(MYSQLI_ASSOC);
+    $animalsList = $stmtAnimals->fetch_all();
 } catch (Exception $e) { }
 
 /* -------- Logic: Calculate Daily Gain (ADG) -------- */
@@ -216,13 +216,13 @@ $sql_weighings = "
     LEFT JOIN lot_animals la ON a.animal_id = la.animal_id AND la.exit_date IS NULL
     LEFT JOIN lot l ON la.lot_id = l.lot_id
     WHERE 1=1 $op_filter
-    ORDER BY w.weighing_date DESC, w.created_at DESC 
+    ORDER BY w.weighing_date DESC, w.created_at DESC, w.weighing_id DESC
     $limit_sql
 ";
 $weighings = $conn->query($sql_weighings);
 
 // KPIs
-$todayWeight = $conn->query("SELECT COUNT(*) as c FROM weighing WHERE weighing_date = CURDATE()")->fetch_assoc()['c'];
+$todayWeight = $conn->query("SELECT COUNT(*) as c FROM weighing WHERE weighing_date = CURRENT_DATE")->fetch_assoc()['c'];
 $avgGainAllQuery = $conn->query("SELECT AVG(daily_gain) as avg_g FROM weighing WHERE daily_gain IS NOT NULL")->fetch_assoc();
 $avgGainAll = (float)$avgGainAllQuery['avg_g'];
 

@@ -1,0 +1,47 @@
+name: Container Check
+
+# Shift-left for the container: every pull request builds the production image
+# and runs it with a PostgreSQL loaded from database/supabase.sql, before
+# anything is merged or published.
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Build and Start the Stack (same Dockerfile as production)
+        run: docker compose up -d --build --wait --wait-timeout 180
+
+      - name: Wait for the Docker HEALTHCHECK to Report Healthy
+        run: |
+          for i in $(seq 1 30); do
+            status=$(docker inspect --format '{{.State.Health.Status}}' "$(docker compose ps -q web)")
+            echo "health: $status"
+            [ "$status" = "healthy" ] && exit 0
+            [ "$status" = "unhealthy" ] && exit 1
+            sleep 2
+          done
+          echo "Container did not become healthy in 60 seconds"; exit 1
+
+      - name: Smoke Test the Running Container (Apache + .htaccess rules)
+        env:
+          BASE_URL: http://localhost:8080
+          CHECK_HTACCESS: '1'
+        run: tests/integration/smoke.sh
+
+      - name: Check the Health Logs are Structured JSON
+        run: |
+          docker compose logs web 2>&1 | grep -o '{"timestamp".*"route":"/health.php".*}' | head -1 | tee line.json
+          python3 -c "import json; l=json.load(open('line.json')); missing=[k for k in ['timestamp','level','route','method','statusCode','latencyMs'] if k not in l]; assert not missing, missing; print('JSON log keys OK')"
+
+      - name: Show the Container Logs
+        if: failure()
+        run: docker compose logs

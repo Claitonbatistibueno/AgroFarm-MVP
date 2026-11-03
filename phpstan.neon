@@ -1,0 +1,17 @@
+# Static analysis. Level 0 for the legacy pages (undefined functions/classes,
+# wrong argument counts, unknown methods); lib/ is checked more strictly below.
+parameters:
+    level: 0
+    paths:
+        - .
+    excludePaths:
+        - vendor/*
+        - node_modules/*
+        - e2e/*
+        - cdk/*
+        - tests/*
+    dynamicConstantNames:
+        - APP_ENV
+        - APP_DEBUG
+    bootstrapFiles:
+        - tests/phpstan-bootstrap.php

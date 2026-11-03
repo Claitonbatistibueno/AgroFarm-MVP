@@ -1,0 +1,6 @@
+# Python lint for the offline analytics scripts in tools/
+target-version = "py311"
+line-length = 120
+[lint]
+select = ["E", "F", "W", "B"]
+ignore = ["E501"]
