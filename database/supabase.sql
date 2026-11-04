@@ -5,7 +5,7 @@
 --   Dashboard > SQL Editor > New query > paste this file > Run
 --   (or: psql "<Session pooler connection string>" -f database/supabase.sql)
 --
--- Demo login after loading:  demo / AgroFarm2026!  (change it after the first login)
+-- Creates a demo user called "demo" (see docker-compose.yml). Change its password after the first login.
 -- =========================================================
 
 

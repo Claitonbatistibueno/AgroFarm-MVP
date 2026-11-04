@@ -1,101 +1,69 @@
-# 🚜 Farm-Project
+# AgroFarm
 
-<details>
-  <summary><b>💡 Why was this project built? (The Market Problem)</b></summary>
-  <br>
-  The Irish agricultural sector has over 135,000 active farms, but many small and medium beef producers struggle with tight margins due to volatile feed and energy costs. Most existing management software is built for massive, industrial dairy operations—leaving family farms to manage their herds based on rough national averages rather than individual data.
-  <br><br>
-  <b>Farm-Project</b> was built to fix this "black box." It brings individual financial traceability, fattening optimization, and predictive Veterinary AI to the everyday farmer, designed to work even in offline rural environments.
-  <br><br>
-  👉 <a href="./why/problem_statement.md">Click here to read the full Market Gap Analysis & Problem Statement</a>
-</details>
+Herd management for small and medium beef farms: animals, weighing, feeding, health records, costs and sales, with reports per animal and an AI assistant that helps read clinical signs.
 
-<br>
+Most farm software is built for large dairy operations. Family beef farms end up managing by averages, so a calf that is not gaining weight, or one that costs more than it will sell for, goes unnoticed. AgroFarm tracks each animal individually. More background in [why/problem_statement.md](why/problem_statement.md).
 
-Welcome to **Farm-Project**, this is my project submission for the Immersive Software Engineering course at the University of Limerick.
+Live version: http://ec2-3-79-238-129.eu-central-1.compute.amazonaws.com
 
-## 🌟 Main Features
+## What it does
 
-* **Authentication & Access:** Secure login (`login.php`, hashed passwords, CSRF, brute-force lock) from the public landing page (`index.html`).
-* **Central Dashboard:** System overview (`dashboard.php`).
-* **Financial Hub:** Financial management and overview (`financial_dashboard.php`).
-* **Comprehensive Reports (`reports.php`):**
-    * **Animal Reports:** Detailed herd reports and history (`reports_animals.php`).
-    * **Feeding Reports:** Animal nutrition history and management (`reports_feeding.php`).
-    * **Health Reports:** Health data tracking (`reports_health.php`).
-    * **Financial Reports:** Detailed financial tracking and summaries (`reports_financial.php`).
-* **Artificial Intelligence (AI) Integration:**
-    * AI Clinical Assistant with photo analysis (`ai_vision.php` → `vet_ai.php`, Claude API).
-    * Herd prediction & anomaly detection (`tools/previsao_ia.py`).
+- Animals and lots, with origin, breed and history
+- Weighing (manual or CSV import) with daily gain per animal
+- Feeding per animal or per lot
+- Health records linked to a medicine catalogue with stock and cost
+- Sales, expenses and profit per animal
+- Reports with charts and PDF/Excel export
+- AI clinical assistant: temperature, symptoms and an optional photo go to the Claude API together with the animal's records, and it returns possible causes and safe next steps (`vet_ai.php`)
+- Herd analytics script in Python that flags weight loss and estimates finishing dates (`tools/previsao_ia.py`)
 
-## 🛠️ Technologies Used
+## Stack
 
-* **Backend:** PHP 8.2 (PDO, prepared statements everywhere)
-* **Database:** PostgreSQL on **Supabase** (free plan)
-* **Frontend:** HTML, Bootstrap, Chart.js, jsPDF
-* **AI Clinical Assistant:** Claude API (`vet_ai.php`) — reads the animal's record, vitals, symptoms and an optional photo, adds PubMed evidence, returns a structured differential
-* **Herd analytics (offline):** Python + scikit-learn (`tools/previsao_ia.py`)
-* **Delivery:** Docker, GitHub Actions, GitHub Container Registry, AWS (EC2 + SSM via CDK)
+PHP 8.2, PostgreSQL on Supabase, Bootstrap and Chart.js on the front end, Python for the analytics script. Docker for packaging, GitHub Actions for CI/CD, AWS (EC2 managed with CDK) for hosting.
 
-## 🔐 Security
+## Running it locally
 
-* Passwords stored with `password_hash` (bcrypt); plain-text legacy passwords are upgraded on the next login.
-* Login brute-force lock (5 failures / 15 min per IP).
-* CSRF token on every form, delete link and `fetch()` call (injected automatically by `config.php`).
-* Prepared statements and HTML escaping on every page.
-* Uploads: extension + MIME whitelist, random names, no PHP execution in `uploads/`.
-* Secrets only in `.env` / GitHub secrets / AWS SSM Parameter Store — never in the code.
-* Supabase REST API locked: RLS on every table, no grants for the `anon` / `authenticated` roles.
-* CI scans every commit for leaked secrets (gitleaks) and vulnerable dependencies.
-
-## 🗄️ Database (Supabase)
-
-1. Create a free project at [supabase.com](https://supabase.com) (region **West EU (Ireland)**).
-2. **SQL Editor → New query**, paste [`database/supabase.sql`](database/supabase.sql) and **Run**. It creates the tables, the demo data and the security rules.
-   If the editor stops part-way on the big file, run the same script split into small files instead: [`database/supabase-parts/`](database/supabase-parts/) `part1` → `part8`, one query each, in order (part 1 cleans any half-created tables, so it is safe to start again).
-3. **Connect → Session pooler** gives the values for `.env`: host, port `5432`, database `postgres`, user `postgres.<project-ref>`, your database password, `DB_SSLMODE=require`.
-
-Demo login: **`demo` / `AgroFarm2026!`** — change it in *Users* after the first login.
-
-## 🚀 Run locally
-
-**With Docker (recommended):** `docker compose up --build` → http://localhost:8080 (a local PostgreSQL is loaded with the same script).
-
-**With XAMPP:** enable `extension=pdo_pgsql` in `php.ini`, copy `.env.example` to `.env` with your Supabase values, open `http://localhost/agrofarm-mvp/`.
-
-## 🔄 CI/CD pipeline
-
-| Workflow | When | What it does |
-|---|---|---|
-| `ci.yml` — Continuous Integration | every PR, and called by Deploy | gitleaks secret scan → PHP lint → PHPStan → PHPUnit → `composer audit` → Python lint → loads `supabase.sql` into PostgreSQL → integration smoke test → herd analytics run → Playwright E2E (desktop + mobile) with axe → CDK tests (zero-cost guardrails) |
-| `container-ci.yml` — Container Check | every PR | builds the production image, runs it with PostgreSQL, waits for `HEALTHCHECK`, smoke test incl. `.htaccess` rules, checks JSON logs |
-| `deploy.yml` — Deploy | push to `main`, tags `v*`, manual | CI gate → image to GHCR (`sha`, `latest`, `vX.Y.Z`) → *(if enabled)* CDK deploy → rollout via SSM with automatic rollback → live smoke test |
-| `deploy.yml` → *Run workflow* with `image_tag` | manual | **rollback**: redeploys an existing image, no rebuild |
-| `keep-supabase-awake.yml` | every 3 days | one query so the free Supabase project is not paused |
-
-Branching: GitHub Flow (`feat/…`, `fix/…`, `ci/…` → PR → `main`), Conventional Commits.
-
-## ☁️ AWS at zero cost
-
-The AWS part is **off** until you enable it, so nothing is created or billed by accident.
-
-* One **t4g.micro** (ARM, the cheapest Free Plan instance type) in **Frankfurt (eu-central-1)**, the same region as the Supabase project, 8 GB disk, public subnet, **no** NAT gateway, load balancer, RDS or Elastic IP — CI tests fail if any of these appear or if a non-Free-Plan instance type is used.
-* Estimated gross usage ≈ **US$ 11/month** (instance ≈ 7, public IPv4 ≈ 3.65, disk ≈ 0.8), paid from the Free Plan credits — the account itself is never charged.
-* The database stays on Supabase (free), the image on GHCR (free).
-* A **budget alert** (default US$ 15) e-mails you at 50 % / 100 % and when the forecast passes the limit (gross usage before credits).
-* Admin through **SSM** (no SSH port, no keys). Secrets in **SSM Parameter Store** (standard tier, free).
-
-To enable: add the repository **secrets** `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `ANTHROPIC_API_KEY`, `BUDGET_EMAIL`, then the repository **variable** `AWS_DEPLOY=true`. The next push to `main` creates the server and deploys.
-
-> Plan after the 6-month Free Plan: move the PHP app to AWS Lambda (always-free tier) with Bref — see [ADR-002](docs/adr/ADR-002-zero-cost-hosting-ec2-now-lambda-later.md).
-
-## 🧠 Optional: herd analytics script
+With Docker:
 
 ```bash
-pip install -r tools/requirements.txt
-python tools/previsao_ia.py          # writes tools/ai_analysis.json (ADG, finish date, risk score)
+docker compose up --build
 ```
-It reads the same `.env` as the PHP app.
+
+Then open http://localhost:8080. Compose starts a local PostgreSQL and loads `database/supabase.sql`, which creates a demo user called `demo` (the password is in `docker-compose.yml`).
+
+Without Docker you need PHP 8.2 with `pdo_pgsql` and a PostgreSQL database. Copy `.env.example` to `.env` and fill in the connection details.
+
+## Database
+
+Production runs on Supabase (free plan). To set up a new project, open the SQL Editor and run `database/supabase.sql`. If the editor stops halfway on the big file, run the files in `database/supabase-parts/` in order instead.
+
+Connect through the **Session pooler** (it works over IPv4) with `DB_SSLMODE=require`. The script turns on row level security for every table, so the Supabase REST API cannot read the data; the app connects to Postgres directly.
+
+After the first login, create your own user and change or delete `demo`.
+
+## CI/CD
+
+- `ci.yml` runs on every pull request: secret scan, PHP lint, PHPStan, PHPUnit, an integration test against a real PostgreSQL, browser tests with Playwright (desktop and mobile, with an accessibility check) and tests for the AWS infrastructure.
+- `container-ci.yml` builds the Docker image and checks it starts and serves every page.
+- `deploy.yml` runs on every merge to `main`: CI again, then the image is pushed to GitHub Container Registry and deployed to EC2. If the new version does not pass its health check, the server goes back to the previous one. Running the workflow by hand with an older `image_tag` is a manual rollback.
+- `keep-supabase-awake.yml` runs a small query every three days, because Supabase pauses free projects after a week without use.
+
+Dependabot opens weekly pull requests for dependencies.
+
+## Hosting cost
+
+The AWS account is on the Free Plan, so nothing is charged; usage comes out of the plan credits. The setup is one `t4g.micro` in Frankfurt (same region as the database), with no load balancer, NAT gateway or managed database. That is about US$11 a month in credits. The infrastructure tests fail if anything more expensive is added, and a budget alert emails when spending passes US$7.50 or US$15.
+
+To deploy to your own account, add these repository secrets: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `BUDGET_EMAIL`, and optionally `ANTHROPIC_API_KEY`. Then create the variable `AWS_DEPLOY=true`.
+
+## Decisions
+
+The main technical choices and their trade-offs are written up in [docs/adr](docs/adr):
+
+- [Why PostgreSQL on Supabase](docs/adr/ADR-001-postgresql-on-supabase.md)
+- [Zero-cost hosting: EC2 now, Lambda later](docs/adr/ADR-002-zero-cost-hosting-ec2-now-lambda-later.md)
+- [How the pipeline is built](docs/adr/ADR-003-ci-cd-gate-container-check-rollback.md)
 
 ---
-*Developed by Claitonbatistibueno*
+
+Claiton Batisti Bueno, Immersive Software Engineering, University of Limerick
