@@ -28,11 +28,24 @@ test('runs on a single instance of the cheapest Free Plan type (t4g.micro, ARM)'
   expect(params).toContain('arm64');
 });
 
-test('no paid networking or managed services: NAT, load balancer, RDS, Elastic IP', () => {
+test('no paid networking or managed services: NAT, load balancer, RDS', () => {
   template.resourceCountIs('AWS::EC2::NatGateway', 0);
   template.resourceCountIs('AWS::ElasticLoadBalancingV2::LoadBalancer', 0);
   template.resourceCountIs('AWS::RDS::DBInstance', 0);
-  template.resourceCountIs('AWS::EC2::EIP', 0);
+});
+
+test('one Elastic IP attached to the instance, so the site address never changes', () => {
+  // attached to a running instance it costs the same as the public IPv4 it replaces
+  template.resourceCountIs('AWS::EC2::EIP', 1);
+  template.hasResourceProperties('AWS::EC2::EIP', { Domain: 'vpc', InstanceId: Match.anyValue() });
+  template.hasOutput('SiteURL', {});
+});
+
+test('a pinned AMI is used as-is, so a new Amazon Linux release does not replace the server', () => {
+  const t = Template.fromStack(new AgroFarmStack(new cdk.App(), 'Pinned', {
+    env: { account: '123456789012', region: 'eu-central-1' }, amiId: 'ami-0123456789abcdef0',
+  }));
+  t.hasResourceProperties('AWS::EC2::Instance', { ImageId: 'ami-0123456789abcdef0' });
 });
 
 test('disk stays inside the Free Plan and is encrypted', () => {

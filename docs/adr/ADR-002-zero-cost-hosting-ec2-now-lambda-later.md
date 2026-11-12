@@ -21,12 +21,12 @@ My Astro project runs its container on ECS Fargate behind a load balancer. That 
 
 ## Decision
 
-- **Now:** CDK stack with one **t4g.micro** (ARM) in **eu-central-1**, the same region as the Supabase project (a page runs several queries; another region would add ~25 ms to each). 8 GB disk, a public subnet, no NAT gateway, no load balancer, no RDS, no Elastic IP. The image comes from GitHub Container Registry (free) instead of ECR and is built for amd64 and arm64.
+- **Now:** CDK stack with one **t4g.micro** (ARM) in **eu-central-1**, the same region as the Supabase project (a page runs several queries; another region would add ~25 ms to each). 8 GB disk, a public subnet, no NAT gateway, no load balancer, no RDS. One Elastic IP keeps the site address fixed (see update below). The image comes from GitHub Container Registry (free) instead of ECR and is built for amd64 and arm64.
 - Free Plan accounts can only launch `t3.micro`, `t3.small`, `t4g.micro`, `t4g.small`, `c7i-flex.large`, `m7i-flex.large`; the stack refuses anything else. Estimated gross usage ≈ US$ 11/month (t4g.micro ≈ 7, public IPv4 ≈ 3.65, 8 GB gp3 ≈ 0.8), paid from the credits.
 - Deploys use **SSM Run Command** (no SSH port, no keys). The script on the server swaps the container, checks `/health.php?probe=ready`, and **rolls back to the previous container** if the new one is not healthy in 60 s.
 - Secrets live in **SSM Parameter Store** (standard tier, free), written by the pipeline from GitHub secrets.
 - A **budget alert** e-mails me at 50 % and 100 % of the monthly limit, measuring gross usage before credits, so I can see how fast credits go.
-- CDK tests fail the build if a NAT gateway, load balancer, RDS instance or Elastic IP is ever added: the cost rules are code, not a promise.
+- CDK tests fail the build if a NAT gateway, load balancer or RDS instance is ever added: the cost rules are code, not a promise.
 - The AWS deploy is **off** until the repository variable `AWS_DEPLOY` is `true`.
 - **Before month 6:** move to Lambda with Bref (sessions in PostgreSQL, uploads in Supabase Storage), then delete the EC2 stack with `cdk destroy`.
 
@@ -48,3 +48,11 @@ My Astro project runs its container on ECS Fargate behind a load balancer. That 
 - **Parameter Store**: cofre de configurações/segredos da AWS; o nível standard é gratuito.
 - **Guardrail**: uma proteção automática; aqui, testes que impedem recursos pagos de entrar na infraestrutura.
 - **Bref**: projeto open source que roda PHP dentro do AWS Lambda.
+
+## Update (2026-11-12): fixed address
+
+A deploy replaced the server because AWS had published a new Amazon Linux image, and the site got a new public address. Two changes stop that:
+
+- **Elastic IP** attached to the instance. Attached to a running instance it costs the same as the public IPv4 address it replaces (≈ US$ 3.65/month, from the credits), and it moves to the new instance if the server is ever replaced.
+- **AMI pinned** by the deploy workflow: it passes the AMI of the running server to CDK, so a new Amazon Linux release no longer replaces the server. Running the Deploy workflow by hand with `upgrade_os` moves to the latest image on purpose (the address stays the same).
+

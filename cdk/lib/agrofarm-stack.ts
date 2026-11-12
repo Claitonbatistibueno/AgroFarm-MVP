@@ -14,6 +14,12 @@ export interface AgroFarmStackProps extends cdk.StackProps {
   readonly budgetUsd?: number;
   /** EC2 size. t4g.micro (ARM) is the cheapest Free Plan eligible type. */
   readonly instanceType?: string;
+  /**
+   * AMI to keep using. The deploy workflow passes the AMI of the running instance,
+   * so a new Amazon Linux release does not replace the server on every deploy.
+   * Empty = latest Amazon Linux 2023 (first deploy, or a deliberate OS upgrade).
+   */
+  readonly amiId?: string;
 }
 
 /**
@@ -25,6 +31,8 @@ export interface AgroFarmStackProps extends cdk.StackProps {
  *  - deploys and rollbacks through SSM Run Command (no SSH port, no keys)
  *  - secrets read at start-up from SSM Parameter Store (standard tier is free)
  *  - a budget alert so any unexpected spending is visible early
+ *  - an Elastic IP, so the site address never changes. Attached to the running
+ *    instance it costs the same as the public IPv4 address it replaces
  */
 export class AgroFarmStack extends cdk.Stack {
   public readonly instance: ec2.Instance;
@@ -79,9 +87,11 @@ export class AgroFarmStack extends cdk.Stack {
       vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
       instanceType: new ec2.InstanceType(instanceType),
-      machineImage: ec2.MachineImage.latestAmazonLinux2023({
-        cpuType: isArm ? ec2.AmazonLinuxCpuType.ARM_64 : ec2.AmazonLinuxCpuType.X86_64,
-      }),
+      machineImage: props.amiId
+        ? ec2.MachineImage.genericLinux({ [this.region]: props.amiId })
+        : ec2.MachineImage.latestAmazonLinux2023({
+          cpuType: isArm ? ec2.AmazonLinuxCpuType.ARM_64 : ec2.AmazonLinuxCpuType.X86_64,
+        }),
       securityGroup: sg,
       role,
       userData,
@@ -92,7 +102,17 @@ export class AgroFarmStack extends cdk.Stack {
         volume: ec2.BlockDeviceVolume.ebs(8, { volumeType: ec2.EbsDeviceVolumeType.GP3, encrypted: true }),
       }],
     });
+    if (props.amiId) {
+      // On purpose: the AMI is pinned to the one already running (see amiId above)
+      cdk.Validations.of(this.instance).acknowledge({ id: 'CloudFormation-Validate::W9010', reason: 'AMI pinned by the deploy workflow' });
+    }
     cdk.Tags.of(this).add('project', 'agrofarm');
+
+    // Fixed public address: survives instance replacement (the EIP moves to the new instance)
+    const eip = new ec2.CfnEIP(this, 'SiteIp', { domain: 'vpc', instanceId: this.instance.instanceId });
+    const publicDns = cdk.Fn.join('', [
+      'ec2-', cdk.Fn.join('-', cdk.Fn.split('.', eip.attrPublicIp)), `.${this.region}.compute.amazonaws.com`,
+    ]);
 
     if (props.budgetEmail) {
       const limit = props.budgetUsd ?? 15;
@@ -114,7 +134,8 @@ export class AgroFarmStack extends cdk.Stack {
     }
 
     new cdk.CfnOutput(this, 'InstanceId', { value: this.instance.instanceId });
-    new cdk.CfnOutput(this, 'SiteURL', { value: `http://${this.instance.instancePublicDnsName}` });
+    new cdk.CfnOutput(this, 'PublicIp', { value: eip.attrPublicIp });
+    new cdk.CfnOutput(this, 'SiteURL', { value: cdk.Fn.join('', ['http://', publicDns]) });
   }
 }
 
