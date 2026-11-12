@@ -99,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
 
 // --- FETCH AUXILIARY DATA ---
 $breeds = $conn->query("SELECT * FROM animal_types ORDER BY breed"); 
-$medical_items = $conn->query("SELECT * FROM medical_catalog ORDER BY type, item_name");
+$medical_items = $conn->query("SELECT * FROM medical_catalog ORDER BY CASE type WHEN 'medicine' THEN 1 WHEN 'vaccine' THEN 2 WHEN 'service' THEN 3 WHEN 'equipment' THEN 4 ELSE 5 END, item_name");
 $countries = $conn->query("SELECT * FROM european_countries ORDER BY country_name ASC");
 $companies = $conn->query("SELECT * FROM company ORDER BY name ASC");
 $vet_suppliers = $conn->query("SELECT * FROM suppliers WHERE status='active' ORDER BY name ASC");
@@ -142,7 +142,7 @@ if (!empty($filter_status)) {
     $params[] = $filter_status; $types .= "s";
 }
 
-$sql_animals .= " ORDER BY a.status ASC, a.animal_id DESC";
+$sql_animals .= " ORDER BY CASE a.status WHEN 'active' THEN 1 WHEN 'sold' THEN 2 WHEN 'dead' THEN 3 ELSE 4 END, a.animal_id DESC"; // same order as the old MySQL ENUM
 
 $stmt = $conn->prepare($sql_animals);
 if (!empty($params)) { $stmt->bind_param($types, ...$params); }

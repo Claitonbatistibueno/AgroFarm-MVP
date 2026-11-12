@@ -35,7 +35,7 @@ if (!empty($_GET['company_id'])) {
 $breeds = $conn->query("SELECT * FROM animal_types ORDER BY breed");
 // Fetch Suppliers for Veterinarian Dropdown
 $vets = $conn->query("SELECT * FROM suppliers ORDER BY name"); 
-$med_types = $conn->query("SELECT DISTINCT type FROM medical_catalog ORDER BY type");
+$med_types = $conn->query("SELECT type FROM medical_catalog GROUP BY type ORDER BY CASE type WHEN 'medicine' THEN 1 WHEN 'vaccine' THEN 2 WHEN 'service' THEN 3 WHEN 'equipment' THEN 4 ELSE 5 END");
 
 
 // --- 2. FILTER LOGIC ---
@@ -94,7 +94,7 @@ $sql = "SELECT
         LEFT JOIN lot l ON la.lot_id = l.lot_id
         LEFT JOIN company c ON l.company_id = c.company_id
         WHERE $sql_where
-        ORDER BY hr.treatment_date DESC";
+        ORDER BY hr.treatment_date DESC, hr.record_id DESC";
 
 $stmt = $conn->prepare($sql);
 if (!empty($params)) { $stmt->bind_param($types, ...$params); }

@@ -71,7 +71,7 @@ if ($filterType !== 'all') {
     $params[] = ucfirst($filterType);
 }
 
-$sql .= " ORDER BY trans_date DESC";
+$sql .= " ORDER BY trans_date DESC, type, description"; // tie-breaker: stable order for rows on the same date
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);

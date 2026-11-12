@@ -222,11 +222,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </div>
 
                     <div class="mb-3">
-                        <label>Photo (optional)</label>
-                        <input type="file" name="animal_image" class="form-control" accept="image/jpeg,image/png,image/webp,image/gif">
-                    </div>
-
-                    <div class="mb-3">
                         <label>Free Observations</label>
                         <textarea name="observations" class="form-control" rows="3" placeholder="Describe behavior, lesions, timeline..."></textarea>
                     </div>
