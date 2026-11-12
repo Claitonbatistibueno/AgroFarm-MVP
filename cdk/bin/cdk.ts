@@ -13,4 +13,5 @@ new AgroFarmStack(app, 'AgroFarmStack', {
   budgetEmail: app.node.tryGetContext('budgetEmail') ?? process.env.BUDGET_EMAIL,
   budgetUsd: Number(app.node.tryGetContext('budgetUsd') ?? process.env.BUDGET_USD ?? 15),
   instanceType: app.node.tryGetContext('instanceType'),
+  amiId: app.node.tryGetContext('amiId') || undefined,
 });

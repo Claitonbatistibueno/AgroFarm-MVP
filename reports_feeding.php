@@ -169,14 +169,14 @@ $lots_opts = $conn->query("SELECT lot_id, name FROM lot ORDER BY name ASC");
 <body>
 
     <div class="topbar">
-        <a href="index.php" class="brand">
+        <a href="dashboard.php" class="brand">
             <i class="fa-solid fa-cow"></i> FarmProject
         </a>
         <div class="menu">
-            <a href="index.php" class="nav-link"><i class="fa-solid fa-home"></i> Dashboard</a>
+            <a href="dashboard.php" class="nav-link"><i class="fa-solid fa-home"></i> Dashboard</a>
             <a href="animal.php" class="nav-link"><i class="fa-solid fa-paw"></i> Animals</a>
             <a href="reports_feeding.php" class="nav-link active"><i class="fa-solid fa-chart-pie"></i> Reports</a>
-            <a href="logout.php" class="nav-link" style="color: #ef4444;"><i class="fa-solid fa-sign-out"></i></a>
+            <a href="dashboard.php?logout=true" class="nav-link" style="color: #ef4444;"><i class="fa-solid fa-sign-out"></i></a>
         </div>
     </div>
 

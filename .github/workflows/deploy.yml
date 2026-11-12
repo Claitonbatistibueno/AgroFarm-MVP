@@ -15,6 +15,10 @@ on:
         description: 'Existing image tag to deploy (rollback), e.g. a commit SHA or v1.0.0. Leave empty to build the current commit.'
         required: false
         default: ''
+      upgrade_os:
+        description: 'Move the server to the latest Amazon Linux image (the server is replaced, the address stays the same).'
+        type: boolean
+        default: false
 
 concurrency:
   group: deploy
@@ -144,7 +148,16 @@ jobs:
         run: |
           npm ci
           npx cdk bootstrap --require-approval never   # one-off CDK setup, safe to repeat
-          npx cdk deploy AgroFarmStack --require-approval never --outputs-file outputs.json
+          # Keep the AMI of the running server, so a new Amazon Linux release does not replace it
+          AMI=""
+          if [ "${{ inputs.upgrade_os }}" != "true" ]; then
+            AMI=$(aws ec2 describe-instances \
+              --filters "Name=tag:aws:cloudformation:stack-name,Values=AgroFarmStack" "Name=instance-state-name,Values=running" \
+              --query 'Reservations[0].Instances[0].ImageId' --output text 2>/dev/null || true)
+            [ "$AMI" = "None" ] && AMI=""
+          fi
+          echo "AMI: ${AMI:-latest Amazon Linux 2023}"
+          npx cdk deploy AgroFarmStack --require-approval never --outputs-file outputs.json -c amiId="$AMI"
 
       - name: Roll out the image (SSM Run Command, automatic rollback if unhealthy)
         working-directory: cdk

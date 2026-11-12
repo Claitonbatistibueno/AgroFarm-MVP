@@ -150,7 +150,7 @@ if (isset($_SESSION['user_name']) && !empty($_SESSION['user_name'])) {
         <a href="dashboard.php">Dashboard</a>
         <a href="animal.php">Animals</a>
         <a href="weighing.php">Weighing</a>
-        <a href="Feeding.php">Feeding</a> 
+        <a href="feeding.php">Feeding</a> 
         <a href="reports.php" class="active">Reports</a>
         <a href="login.php" style="color:#f87171;">Logout</a>
     </div>
