@@ -81,7 +81,7 @@ $sql = "SELECT
         LEFT JOIN lot_animals la ON a.animal_id = la.animal_id AND la.exit_date IS NULL
         LEFT JOIN lot l ON la.lot_id = l.lot_id
         WHERE $sql_where
-        ORDER BY w.weight_kg DESC";
+        ORDER BY w.weight_kg DESC, a.tag_number";
 
 $stmt = $conn->prepare($sql);
 if (!empty($params)) { $stmt->bind_param($types, ...$params); }

@@ -781,12 +781,69 @@
 
       <section id="form">
         <div class="section-title">
-          <h3>Try AgroFarm</h3>
-          <p>Animal registration, weighing, feeding, health and finance live inside the secure app.</p>
+          <h3>Form Demo</h3>
+          <p>This does not send real data yet; it is a future-ready structure.</p>
         </div>
+
         <div class="card">
           <div class="card-pad">
-            <a class="btn primary" href="login.php">Log in to register animals</a>
+            <form
+              action="submit.php"
+              method="post"
+              aria-label="Animal registration form"
+            >
+              <div class="form-grid">
+                <div>
+                  <label for="tag">Animal tag</label>
+                  <input
+                    id="tag"
+                    name="tag_number"
+                    type="text"
+                    placeholder="e.g., TAG001"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label for="sex">Sex</label>
+                  <input id="sex" name="sex" type="text" placeholder="male / female" />
+                </div>
+
+                <div>
+                  <label for="country">Country of origin</label>
+                  <input
+                    id="country"
+                    name="country_id"
+                    type="number"
+                    placeholder="e.g., 1"
+                  />
+                </div>
+
+                <div>
+                  <label for="status">Status</label>
+                  <input
+                    id="status"
+                    name="status"
+                    type="text"
+                    placeholder="active / sold / dead"
+                  />
+                </div>
+              </div>
+
+              <div class="mt-12">
+                <label for="desc">Notes (description)</label>
+                <textarea
+                  id="desc"
+                  name="description"
+                  placeholder="Example: moved to lot A, health notes, feeding remarks, etc."
+                ></textarea>
+              </div>
+
+              <div class="cta-row">
+                <input class="btn primary" type="submit" value="Save (demo)" />
+                <input class="btn" type="reset" value="Clear" />
+              </div>
+            </form>
           </div>
         </div>
       </section>

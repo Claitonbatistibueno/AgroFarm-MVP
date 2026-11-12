@@ -231,7 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
                 </thead>
                 <tbody>
                     <?php
-                    $result = $conn->query("SELECT * FROM animal_types ORDER BY species, breed");
+                    $result = $conn->query("SELECT * FROM animal_types ORDER BY CASE species WHEN 'cattle' THEN 1 WHEN 'sheep' THEN 2 WHEN 'goat' THEN 3 WHEN 'pig' THEN 4 WHEN 'horse' THEN 5 ELSE 6 END, breed");
                     
                     if ($result && $result->num_rows > 0):
                         while($row = $result->fetch_assoc()):

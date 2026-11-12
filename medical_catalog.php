@@ -79,7 +79,7 @@ $suppliers = $conn->query("SELECT supplier_id, name FROM suppliers WHERE status=
 $sql_items = "SELECT m.*, s.name as supplier_name 
               FROM medical_catalog m 
               LEFT JOIN suppliers s ON m.supplier_id = s.supplier_id 
-              ORDER BY m.type, m.item_name";
+              ORDER BY CASE m.type WHEN 'medicine' THEN 1 WHEN 'vaccine' THEN 2 WHEN 'service' THEN 3 WHEN 'equipment' THEN 4 ELSE 5 END, m.item_name"; // same order as the old MySQL ENUM
 $items_list = $conn->query($sql_items);
 ?>
 
