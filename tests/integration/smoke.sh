@@ -41,7 +41,7 @@ loc=$(curl -s -o /dev/null -w '%{redirect_url}' -c "$JAR" -b "$JAR" --data-urlen
 [[ "$loc" == *dashboard.php ]] && pass "login" || { fail "login (redirect: $loc)"; echo "$FAILS failure(s)"; exit 1; }
 
 # --- 4. Every page renders without PHP or SQL errors
-PAGES="dashboard.php animal.php breeds.php clients.php Feeding.php weighing.php weighing.php?show_all=1
+PAGES="dashboard.php animal.php breeds.php clients.php feeding.php weighing.php weighing.php?show_all=1
 medical_catalog.php suppliers_list.php users.php settings.php financial_dashboard.php reports.php
 reports_animals.php reports_feeding.php reports_health.php reports_weight.php reports_financial.php ai_vision.php"
 for page in $PAGES; do

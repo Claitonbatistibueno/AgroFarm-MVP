@@ -13,3 +13,6 @@ DirectoryIndex index.html login.php
     Require all denied
 </FilesMatch>
 RedirectMatch 404 ^/?(.*/)?(\.git|\.github|\.idea|\.venv|database|tools|lib|tests|e2e|cdk|docker|docs|vendor|node_modules)(/|$)
+
+# Old link with a capital F (Windows/XAMPP ignored the case, Linux does not)
+RedirectMatch 301 ^/?Feeding\.php$ /feeding.php
