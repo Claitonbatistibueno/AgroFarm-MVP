@@ -4,7 +4,7 @@ Herd management for small and medium beef farms: animals, weighing, feeding, hea
 
 Most farm software is built for large dairy operations. Family beef farms end up managing by averages, so a calf that is not gaining weight, or one that costs more than it will sell for, goes unnoticed. AgroFarm tracks each animal individually. More background in [why/problem_statement.md](why/problem_statement.md).
 
-Live version: http://ec2-3-67-132-233.eu-central-1.compute.amazonaws.com
+Live version: http://ec2-63-184-32-11.eu-central-1.compute.amazonaws.com
 
 ## What it does
 
